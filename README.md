@@ -111,24 +111,24 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 ```mermaid
 flowchart LR
   subgraph Client["User Browser (HTTPS)"]
-    UI[Process Documenter UI<br/>(Streamlit Component / React)]
-    Capture[Screen Capture via<br/>getDisplayMedia + Canvas]
-    Steps[Marked Steps<br/>(PNG + Notes in Memory)]
-    Exporter[Markdown/PDF Exporter]
+    UI["Process Documenter UI<br/>(Streamlit Component / React)"]
+    Capture["Screen Capture via<br/>getDisplayMedia + Canvas"]
+    Steps["Marked Steps<br/>(PNG + Notes in Memory)"]
+    Exporter["Markdown/PDF Exporter"]
   end
 
   subgraph Server["App Server (FastAPI / Streamlit Backend)"]
-    Upload[Secure Upload Endpoint]
-    Redactor[Optional Redaction<br/>(blur/mask PII)]
-    AI[Gemini 1.5 Pro Client<br/>(Caption & SOP Gen)]
-    Builder[Doc Builder<br/>(Markdown → PDF/Google Doc)]
-    TempStore[(Ephemeral Storage)]
-    Audit[(Audit Log:<br/>user, timestamps, model, version)]
+    Upload["Secure Upload Endpoint"]
+    Redactor["Optional Redaction<br/>(blur/mask PII)"]
+    AI["Gemini 1.5 Pro Client<br/>(Caption & SOP Gen)"]
+    Builder["Doc Builder<br/>(Markdown → PDF/Google Doc)"]
+    TempStore[("Ephemeral Storage")]
+    Audit[("Audit Log:<br/>user, timestamps, model, version")]
   end
 
   subgraph External["External Services"]
-    Gemini[Gemini 1.5 Pro API]
-    GDocs[Google Docs API (optional)]
+    Gemini["Gemini 1.5 Pro API"]
+    GDocs["Google Docs API (optional)"]
   end
 
   UI -- "Start Capture (user consent)" --> Capture
@@ -151,7 +151,7 @@ flowchart LR
 sequenceDiagram
   participant U as User
   participant UI as Browser UI
-  participant CAP as Screen Capture<br/>(getDisplayMedia + Canvas)
+  participant CAP as "Screen Capture<br/>(getDisplayMedia + Canvas)"
   participant S as Server Backend
   participant G as Gemini 1.5 Pro
   participant D as Doc Exporter
