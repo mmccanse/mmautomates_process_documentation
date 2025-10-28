@@ -145,6 +145,7 @@ flowchart LR
   Builder --> Audit
   TempStore -- "Auto-delete ≤ N hours" --> TempStore
 
+
   sequenceDiagram
   participant U as User
   participant UI as Browser UI
@@ -174,6 +175,7 @@ flowchart LR
   D-->>UI: Return doc (download/preview link)
   S->>S: Write audit metadata (no content)
   S->>S: Auto-delete temp files per retention policy
+
 
 
 
