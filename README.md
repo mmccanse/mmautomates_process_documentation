@@ -144,9 +144,11 @@ flowchart LR
   Builder --> GDocs
   Builder --> Audit
   TempStore -- "Auto-delete ≤ N hours" --> TempStore
+```
 
-
-  sequenceDiagram
+#### User Interaction Sequence
+```mermaid
+sequenceDiagram
   participant U as User
   participant UI as Browser UI
   participant CAP as Screen Capture<br/>(getDisplayMedia + Canvas)
@@ -175,8 +177,7 @@ flowchart LR
   D-->>UI: Return doc (download/preview link)
   S->>S: Write audit metadata (no content)
   S->>S: Auto-delete temp files per retention policy
-
-
+```
 
 
 ---
