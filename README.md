@@ -106,6 +106,9 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 - No raw screen content is stored long-term.
 
 ### 7. Architecture
+
+#### High-Level Component Flow
+```mermaid
 flowchart LR
   subgraph Client["User Browser (HTTPS)"]
     UI[Process Documenter UI<br/>(Streamlit Component / React)]
