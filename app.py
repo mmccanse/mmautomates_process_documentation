@@ -748,16 +748,18 @@ def authenticate_google():
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
     st.markdown("### 📝 Edit Key Moments")
-    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or delete unwanted ones.")
+    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or check the box to delete unwanted ones.")
     
     edited_moments = []
-    deleted_indices = []
     
     # Display each moment with edit controls
     for i, moment in enumerate(key_moments):
-        # Check if this moment should be shown
         with st.container():
-            col1, col2, col3, col4 = st.columns([1, 2, 4, 1])
+            col0, col1, col2, col3 = st.columns([0.5, 1, 2, 4])
+            
+            with col0:
+                # Delete checkbox
+                delete = st.checkbox("", key=f"delete_{i}", help="Check to delete")
             
             with col1:
                 # Editable timestamp
@@ -765,7 +767,8 @@ def show_moment_editor(key_moments):
                     "Time",
                     value=moment['timestamp'],
                     key=f"time_{i}",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    disabled=delete
                 )
             
             with col2:
@@ -780,7 +783,8 @@ def show_moment_editor(key_moments):
                     options=type_options,
                     index=type_options.index(current_type),
                     key=f"type_{i}",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    disabled=delete
                 )
             
             with col3:
@@ -790,27 +794,24 @@ def show_moment_editor(key_moments):
                     value=moment['description'],
                     height=60,
                     key=f"desc_{i}",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    disabled=delete
                 )
                 
                 # Navigation path (only for navigation type)
-                if new_type == 'navigation':
+                if new_type == 'navigation' and not delete:
                     new_nav_path = st.text_input(
                         "Navigation Path",
                         value=moment.get('navigation_path', ''),
                         key=f"nav_{i}",
-                        placeholder="Menu > Options > Add Account"
+                        placeholder="Menu > Options > Add Account",
+                        disabled=delete
                     )
                 else:
                     new_nav_path = None
             
-            with col4:
-                # Delete button
-                if st.button("❌", key=f"delete_{i}", help="Delete this moment"):
-                    deleted_indices.append(i)
-            
-            # Add to edited list if not marked for deletion
-            if i not in deleted_indices:
+            # Only add if not marked for deletion
+            if not delete:
                 edited_moment = {
                     'timestamp': new_timestamp,
                     'type': new_type,
@@ -818,8 +819,39 @@ def show_moment_editor(key_moments):
                     'navigation_path': new_nav_path
                 }
                 edited_moments.append(edited_moment)
+            else:
+                st.caption("🗑️ This moment will be deleted when you apply changes")
             
             st.markdown("---")
+    
+    # Add new moment section
+    with st.expander("➕ Add New Moment"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_timestamp = st.text_input("Timestamp (MM:SS)", key="new_time", placeholder="2:30")
+            new_type = st.selectbox("Type", options=['navigation', 'action', 'data_entry', 'decision', 'submission'], key="new_type")
+        
+        with col2:
+            new_description = st.text_area("Description", key="new_desc", height=100)
+            if new_type == 'navigation':
+                new_nav_path = st.text_input("Navigation Path", key="new_nav", placeholder="Menu > Options > Add Account")
+            else:
+                new_nav_path = None
+        
+        if st.button("➕ Add This Moment"):
+            if new_timestamp and new_description:
+                edited_moments.append({
+                    'timestamp': new_timestamp,
+                    'type': new_type,
+                    'description': new_description,
+                    'navigation_path': new_nav_path
+                })
+                st.success("Moment added! Click 'Apply Changes' below to update.")
+            else:
+                st.error("Please enter both timestamp and description")
+    
+    return edited_moments
     
     # Add new moment section
     with st.expander("➕ Add New Moment"):
