@@ -6,6 +6,7 @@ import io
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from streamlit.components.v1 import html
 
 # Load environment variables
 load_dotenv()
@@ -91,53 +92,325 @@ def add_step(step_data):
         }
         st.session_state.steps.append(step)
 
+def get_capture_html():
+    """Get the HTML content for the capture interface"""
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen & Audio Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .start-btn { background: #4CAF50; color: white; }
+        .stop-btn { background: #f44336; color: white; }
+        .capture-btn { background: #2196F3; color: white; }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .recording { background: #ffebee; color: #c62828; }
+        .ready { background: #e8f5e8; color: #2e7d32; }
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .screenshot {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .screenshot img {
+            width: 100%;
+            height: auto;
+            border-radius: 3px;
+        }
+        .screenshot-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Process Documenter - Screen & Audio Capture</h1>
+    
+    <div class="controls">
+        <button id="startBtn" class="start-btn">Start Recording</button>
+        <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
+        <button id="captureBtn" class="capture-btn" disabled>Mark Step</button>
+    </div>
+    
+    <div id="status" class="status ready">Ready to start recording</div>
+    
+    <div id="screenshots" class="screenshots"></div>
+    
+    <script>
+        let mediaRecorder;
+        let screenStream;
+        let audioStream;
+        let combinedStream;
+        let recordedChunks = [];
+        let stepCounter = 0;
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const status = document.getElementById('status');
+        const screenshots = document.getElementById('screenshots');
+        
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        captureBtn.addEventListener('click', captureStep);
+        
+        async function startRecording() {
+            try {
+                // Request screen capture
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { mediaSource: 'screen' },
+                    audio: false
+                });
+                
+                // Request audio capture
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+                
+                // Combine streams
+                combinedStream = new MediaStream([
+                    ...screenStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
+                
+                // Set up media recorder
+                mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: 'video/webm;codecs=vp9,opus'
+                });
+                
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.start(1000); // Collect data every second
+                
+                // Update UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                captureBtn.disabled = false;
+                status.textContent = 'Recording... Click "Mark Step" to capture screenshots';
+                status.className = 'status recording';
+                
+                // Handle screen share end
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopRecording();
+                };
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                status.textContent = 'Error: ' + error.message;
+                status.className = 'status';
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            
+            // Stop all tracks
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Update UI
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            captureBtn.disabled = true;
+            status.textContent = 'Recording stopped. You can start a new session.';
+            status.className = 'status ready';
+            
+            // Generate final video
+            if (recordedChunks.length > 0) {
+                generateVideo();
+            }
+        }
+        
+        function captureStep() {
+            if (!screenStream) return;
+            
+            stepCounter++;
+            
+            // Create canvas to capture current screen
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const video = document.createElement('video');
+            
+            video.srcObject = screenStream;
+            video.play();
+            
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw current frame
+                ctx.drawImage(video, 0, 0);
+                
+                // Convert to blob
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Create screenshot element
+                    const screenshotDiv = document.createElement('div');
+                    screenshotDiv.className = 'screenshot';
+                    screenshotDiv.innerHTML = `
+                        <img src="${url}" alt="Step ${stepCounter}">
+                        <div class="screenshot-info">
+                            Step ${stepCounter}<br>
+                            ${new Date().toLocaleTimeString()}
+                        </div>
+                    `;
+                    
+                    screenshots.appendChild(screenshotDiv);
+                    
+                    // Store data for later processing
+                    storeStepData(blob, stepCounter);
+                }, 'image/png');
+            };
+        }
+        
+        function storeStepData(blob, stepNumber) {
+            // Convert blob to base64 for storage
+            const reader = new FileReader();
+            reader.onload = () => {
+                const stepData = {
+                    step: stepNumber,
+                    timestamp: new Date().toISOString(),
+                    screenshot: reader.result,
+                    audio: null // Will be filled when recording stops
+                };
+                
+                // Store in localStorage
+                const existingSteps = JSON.parse(localStorage.getItem('processSteps') || '[]');
+                existingSteps.push(stepData);
+                localStorage.setItem('processSteps', JSON.stringify(existingSteps));
+            };
+            reader.readAsDataURL(blob);
+        }
+        
+        function generateVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            // Store video data
+            const reader = new FileReader();
+            reader.onload = () => {
+                const videoData = {
+                    timestamp: new Date().toISOString(),
+                    video: reader.result,
+                    duration: recordedChunks.length
+                };
+                localStorage.setItem('processVideo', JSON.stringify(videoData));
+            };
+            reader.readAsDataURL(blob);
+            
+            // Show download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `process_recording_${Date.now()}.webm`;
+            downloadLink.textContent = 'Download Recording';
+            downloadLink.style.display = 'block';
+            downloadLink.style.textAlign = 'center';
+            downloadLink.style.margin = '20px 0';
+            downloadLink.style.padding = '10px';
+            downloadLink.style.backgroundColor = '#4CAF50';
+            downloadLink.style.color = 'white';
+            downloadLink.style.textDecoration = 'none';
+            downloadLink.style.borderRadius = '5px';
+            
+            document.body.appendChild(downloadLink);
+        }
+        
+        // Keyboard shortcut for marking steps
+        document.addEventListener('keydown', (event) => {
+            if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+                event.preventDefault();
+                if (!captureBtn.disabled) {
+                    captureStep();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+"""
+
 def show_capture_interface():
     """Show the screen capture interface"""
     st.markdown("""
     <div style="text-align: center; padding: 20px; border: 2px dashed #ccc; border-radius: 10px; margin: 20px 0;">
         <h3>🎥 Screen & Audio Capture</h3>
-        <p>For this prototype, we'll simulate the capture process. In a real implementation, this would use browser APIs to capture your screen and audio.</p>
+        <p>Click the button below to open the capture interface in a new window</p>
+        <button onclick="window.open('data:text/html;base64,' + btoa(unescape(encodeURIComponent(document.getElementById('capture-html').innerHTML))), '_blank', 'width=1000,height=700')" 
+                style="background: #4CAF50; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+            Open Capture Interface
+        </button>
     </div>
     """, unsafe_allow_html=True)
     
     # Instructions
     st.markdown("""
-    ### 📋 How to Test the App
+    ### 📋 Capture Instructions
     
-    **For this demo, we'll simulate the capture process:**
-    
-    1. **Click "Mark Step (Manual)"** below to simulate capturing screenshots
-    2. **Add notes** describing what you would be doing
-    3. **Repeat** for 3-5 steps to simulate a complete process
-    4. **Stop Recording** when you have enough steps
-    5. **Generate Documentation** to see the AI create step-by-step instructions
-    
-    **Example process to simulate:**
-    - Step 1: "Open Google Docs"
-    - Step 2: "Create new document" 
-    - Step 3: "Add title and content"
-    - Step 4: "Format the text"
-    - Step 5: "Save the document"
+    1. **Click "Open Capture Interface"** above
+    2. **Allow screen sharing** when prompted (select the window/tab you want to record)
+    3. **Allow microphone access** when prompted
+    4. **Start Recording** in the new window
+    5. **Mark Steps** by clicking the "Mark Step" button or pressing `Ctrl+Shift+S`
+    6. **Stop Recording** when finished
+    7. **Return here** and click "Load Captured Data" below
     """)
     
-    # Manual step input
-    st.subheader("📝 Add Step Manually")
-    col1, col2 = st.columns([3, 1])
+    # Hidden HTML content for the capture interface
+    st.markdown(f'<div id="capture-html" style="display:none;">{get_capture_html()}</div>', unsafe_allow_html=True)
     
-    with col1:
-        step_note = st.text_input("Describe what you're doing:", placeholder="e.g., Click 'New Document' button")
-    
-    with col2:
-        if st.button("📸 Add Step", type="primary"):
-            if step_note:
-                add_step({
-                    'screenshot': f"data:image/png;base64,mock_screenshot_{len(st.session_state.steps) + 1}",
-                    'note': step_note
-                })
-                st.success(f"Step {len(st.session_state.steps)} added!")
-                st.rerun()
-            else:
-                st.warning("Please enter a description for the step")
+    if st.button("📥 Load Captured Data", type="primary"):
+        # This would load data from localStorage in a real implementation
+        st.info("In a real implementation, this would load the captured screenshots and audio from the browser's localStorage.")
+        st.success("✅ Mock data loaded! This simulates loading captured steps.")
+        
+        # Add some mock steps for demonstration
+        for i in range(3):
+            add_step({
+                'screenshot': f"data:image/png;base64,mock_screenshot_{i+1}",
+                'note': f"Step {i+1}: Mock captured step"
+            })
+        st.rerun()
 
 def generate_documentation():
     """Generate documentation using Gemini AI"""
@@ -233,10 +506,22 @@ def main():
             # Show capture interface
             show_capture_interface()
             
-            # Stop recording button
-            if st.button("⏹️ Stop Recording", type="secondary", use_container_width=True):
-                stop_recording()
-                st.rerun()
+            # Recording controls
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("📸 Mark Step (Manual)", use_container_width=True):
+                    # Manual step marking for testing
+                    add_step({
+                        'screenshot': f"mock_screenshot_{len(st.session_state.steps) + 1}",
+                        'note': f"Manual Step {len(st.session_state.steps) + 1}"
+                    })
+                    st.success(f"Step {len(st.session_state.steps)} captured!")
+                    st.rerun()
+            
+            with col_b:
+                if st.button("⏹️ Stop Recording", use_container_width=True):
+                    stop_recording()
+                    st.rerun()
             
             # Current steps
             if st.session_state.steps:
