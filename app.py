@@ -113,35 +113,74 @@ def transcribe_audio_with_gemini(audio_path):
     """Transcribe audio using Gemini API"""
     try:
         with st.spinner("🎤 Transcribing audio with AI... This may take a minute..."):
-            # Upload audio file to Gemini
-            audio_file = genai.upload_file(audio_path)
+            # Read audio file as bytes
+            with open(audio_path, 'rb') as audio_file:
+                audio_data = audio_file.read()
             
-            # Wait for file to be processed
-            while audio_file.state.name == "PROCESSING":
-                time.sleep(2)
-                audio_file = genai.get_file(audio_file.name)
+            # Create a Part object with the audio data
+            import google.generativeai as genai
+            from google.generativeai.types import File
             
-            if audio_file.state.name == "FAILED":
-                raise ValueError("Audio processing failed")
-            
-            # Create prompt for transcription
-            prompt = """
-            Please transcribe this audio recording. 
-            
-            This is someone explaining an accounting or business process.
-            
-            Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
-            
-            Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
-            """
-            
-            # Generate transcription
-            response = model.generate_content([prompt, audio_file])
-            
-            # Clean up uploaded file
-            genai.delete_file(audio_file.name)
-            
-            return response.text
+            # Upload the file using the File API
+            try:
+                # Try the newer API first
+                uploaded_file = genai.upload_file(path=audio_path)
+                
+                # Wait for processing
+                import time
+                while uploaded_file.state.name == "PROCESSING":
+                    time.sleep(2)
+                    uploaded_file = genai.get_file(uploaded_file.name)
+                
+                if uploaded_file.state.name == "FAILED":
+                    raise ValueError("Audio processing failed")
+                
+                # Create prompt for transcription
+                prompt = """
+                Please transcribe this audio recording. 
+                
+                This is someone explaining an accounting or business process.
+                
+                Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
+                
+                Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
+                """
+                
+                # Generate transcription
+                response = model.generate_content([prompt, uploaded_file])
+                
+                # Clean up
+                genai.delete_file(uploaded_file.name)
+                
+                return response.text
+                
+            except AttributeError:
+                # Fallback: Use inline audio data
+                st.warning("Using alternative transcription method...")
+                
+                import base64
+                audio_b64 = base64.b64encode(audio_data).decode()
+                
+                prompt = """
+                Please transcribe this audio recording. 
+                
+                This is someone explaining an accounting or business process.
+                
+                Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
+                
+                Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
+                """
+                
+                # Try with inline data
+                response = model.generate_content([
+                    prompt,
+                    {
+                        "mime_type": "audio/mp3",
+                        "data": audio_b64
+                    }
+                ])
+                
+                return response.text
             
     except Exception as e:
         st.error(f"Error transcribing audio: {str(e)}")
