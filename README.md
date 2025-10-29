@@ -29,7 +29,7 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 
 3. **Finish & Generate**
    - When done, the user clicks **“Finish Session.”**
-   - The app sends the collected screenshots (and optional notes) to an AI model (Gemini 1.5 Pro) that:
+   - The app sends the collected screenshots (and optional notes) to an AI model (Gemini 2.5 Pro) that:
      - Describes each screenshot in clear, imperative language (“Click ‘New Journal Entry’ in NetSuite”).
      - Orders them chronologically.
      - Generates a structured Markdown document with:
@@ -54,7 +54,7 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 | **Frontend UI** | Streamlit (Python) or lightweight React/Next.js frontend | Browser interface for recording and previewing steps |
 | **Screen Capture** | `navigator.mediaDevices.getDisplayMedia()` (WebRTC API) | Secure, user-consented screen capture |
 | **Snapshot Capture** | `<canvas>` element + `toBlob()` | Captures still frames on demand when user marks a step |
-| **AI Captioning & Document Generation** | Gemini 1.5 Pro API | Generates step-by-step text and structured documentation |
+| **AI Captioning & Document Generation** | Gemini 2.5 Pro API | Generates step-by-step text and structured documentation |
 | **Document Export** | Markdown → PDF/Google Docs via `pypandoc` or Google Docs API | User downloads or exports documentation |
 | **Optional Backend** | FastAPI / Streamlit server functions | Receives uploaded screenshots, calls Gemini API, deletes temp data |
 | **Data Storage** | Temporary in memory or encrypted short-term storage | Deleted automatically after generation |
@@ -174,14 +174,14 @@ flowchart LR
   subgraph Server["App Server (FastAPI / Streamlit Backend)"]
     Upload["Secure Upload Endpoint"]
     Redactor["Optional Redaction<br/>(blur/mask PII)"]
-    AI["Gemini 1.5 Pro Client<br/>(Caption & SOP Gen)"]
+    AI["Gemini 2.5 Pro Client<br/>(Caption & SOP Gen)"]
     Builder["Doc Builder<br/>(Markdown → PDF/Google Doc)"]
     TempStore[("Ephemeral Storage")]
     Audit[("Audit Log:<br/>user, timestamps, model, version")]
   end
 
   subgraph External["External Services"]
-    Gemini["Gemini 1.5 Pro API"]
+    Gemini["Gemini 2.5 Pro API"]
     GDocs["Google Docs API (optional)"]
   end
 
@@ -207,7 +207,7 @@ sequenceDiagram
   participant UI as Browser UI
   participant CAP as "Screen Capture<br/>(getDisplayMedia + Canvas)"
   participant S as Server Backend
-  participant G as Gemini 1.5 Pro
+  participant G as Gemini 2.5 Pro
   participant D as Doc Exporter
 
   U->>UI: Open app (HTTPS, SSO optional)
