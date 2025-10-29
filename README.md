@@ -105,7 +105,61 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 - Keep a small metadata log (who generated, when, model name, model version).
 - No raw screen content is stored long-term.
 
-### 7. Architecture
+### 7. Enterprise Considerations
+
+#### Data Privacy & Security (Production Requirements)
+
+**Current Prototype Limitations:**
+- Screenshots and audio sent to Google's Gemini API
+- No user authentication or access controls
+- Data stored temporarily in browser memory only
+- No audit trails or compliance logging
+
+**Enterprise Production Requirements:**
+
+##### 1. Data Privacy Controls
+- **On-Premises AI Processing**: Deploy AI models locally to avoid sending sensitive data to external APIs
+- **Data Redaction**: Implement automatic PII/financial data detection and blurring before processing
+- **Encryption**: End-to-end encryption for all data in transit and at rest
+- **Data Residency**: Ensure data never leaves approved geographic regions
+
+##### 2. Access Control & Authentication
+- **Single Sign-On (SSO)**: Integrate with corporate identity providers (Okta, Azure AD, etc.)
+- **Role-Based Access**: Different permission levels for recording, viewing, and managing documentation
+- **Multi-Factor Authentication**: Required for all users accessing sensitive financial processes
+- **Session Management**: Automatic timeout and secure session handling
+
+##### 3. Compliance & Audit
+- **Audit Logging**: Complete audit trail of who recorded what, when, and where
+- **Data Retention Policies**: Automatic deletion of recordings after specified periods
+- **Compliance Reporting**: Built-in reports for SOX, GDPR, and other regulatory requirements
+- **Change Management**: Version control and approval workflows for process documentation
+
+##### 4. Infrastructure Security
+- **Network Isolation**: Deploy in private networks with restricted internet access
+- **Container Security**: Use secure, scanned container images with minimal attack surface
+- **Database Security**: Encrypted databases with proper access controls
+- **Backup & Recovery**: Secure, encrypted backups with tested recovery procedures
+
+##### 5. Operational Controls
+- **Monitoring**: Real-time monitoring of system usage and potential security incidents
+- **Incident Response**: Automated alerts and response procedures for security events
+- **Regular Security Audits**: Quarterly penetration testing and vulnerability assessments
+- **Staff Training**: Regular security awareness training for all users
+
+##### 6. Data Governance
+- **Data Classification**: Automatic classification of captured content (public, internal, confidential, restricted)
+- **Approval Workflows**: Multi-level approval for sensitive process documentation
+- **Data Loss Prevention**: Automated detection and prevention of sensitive data exfiltration
+- **Third-Party Risk**: Vendor security assessments and ongoing monitoring
+
+**Implementation Priority:**
+1. **Phase 1**: Authentication, encryption, and basic audit logging
+2. **Phase 2**: Data redaction and on-premises AI processing
+3. **Phase 3**: Advanced compliance features and monitoring
+4. **Phase 4**: Full enterprise governance and risk management
+
+### 8. Architecture
 
 #### High-Level Component Flow
 ```mermaid
