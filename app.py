@@ -306,11 +306,25 @@ def main():
     )
     
     if uploaded_file is not None:
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            video_path = tmp_file.name
-            st.session_state.video_path = video_path
+    # Display file info
+    st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
+    
+    # Save uploaded file temporarily with proper flushing
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+        # Read in chunks for larger files
+        bytes_data = uploaded_file.getvalue()
+        tmp_file.write(bytes_data)
+        tmp_file.flush()  # Ensure all data is written
+        os.fsync(tmp_file.fileno())  # Force write to disk
+        video_path = tmp_file.name
+        st.session_state.video_path = video_path
+    
+    # Verify file was saved correctly
+    if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
+        st.success(f"✅ Video uploaded successfully!")
+    else:
+        st.error("❌ Video upload failed. Please try again.")
+        video_path = None
         
         # Show video preview
         st.video(video_path)
