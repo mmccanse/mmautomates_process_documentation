@@ -375,29 +375,152 @@ def show_capture_interface():
     st.markdown("""
     <div style="text-align: center; padding: 20px; border: 2px dashed #ccc; border-radius: 10px; margin: 20px 0;">
         <h3>🎥 Screen & Audio Capture</h3>
-        <p>Click the button below to open the capture interface in a new window</p>
-        <button onclick="window.open('data:text/html;base64,' + btoa(unescape(encodeURIComponent(document.getElementById('capture-html').innerHTML))), '_blank', 'width=1000,height=700')" 
-                style="background: #4CAF50; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
-            Open Capture Interface
-        </button>
+        <p>For this prototype, we'll use the built-in capture interface below</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Instructions
     st.markdown("""
-    ### 📋 Capture Instructions
+    ### 📋 How to Use the Capture Interface
     
-    1. **Click "Open Capture Interface"** above
+    **The capture interface is now built into this page:**
+    
+    1. **Click "Start Recording"** below to begin screen and audio capture
     2. **Allow screen sharing** when prompted (select the window/tab you want to record)
     3. **Allow microphone access** when prompted
-    4. **Start Recording** in the new window
-    5. **Mark Steps** by clicking the "Mark Step" button or pressing `Ctrl+Shift+S`
-    6. **Stop Recording** when finished
-    7. **Return here** and click "Load Captured Data" below
+    4. **Mark Steps** by clicking the "Mark Step" button or pressing `Ctrl+Shift+S`
+    5. **Stop Recording** when finished
+    6. **Generate Documentation** to create AI-powered instructions
     """)
     
-    # Hidden HTML content for the capture interface
-    st.markdown(f'<div id="capture-html" style="display:none;">{get_capture_html()}</div>', unsafe_allow_html=True)
+    # Built-in capture interface using Streamlit components
+    st.subheader("🎥 Capture Interface")
+    
+    # Create a placeholder for the capture interface
+    capture_placeholder = st.empty()
+    
+    # JavaScript for screen capture
+    capture_js = """
+    <script>
+    let mediaRecorder;
+    let screenStream;
+    let audioStream;
+    let stepCounter = 0;
+    let isRecording = false;
+    
+    async function startRecording() {
+        try {
+            // Request screen capture
+            screenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { mediaSource: 'screen' },
+                audio: false
+            });
+            
+            // Request audio capture
+            audioStream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+            
+            isRecording = true;
+            document.getElementById('status').textContent = 'Recording... Click "Mark Step" to capture screenshots';
+            document.getElementById('status').style.background = '#ffebee';
+            document.getElementById('status').style.color = '#c62828';
+            
+            // Handle screen share end
+            screenStream.getVideoTracks()[0].onended = () => {
+                stopRecording();
+            };
+            
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            document.getElementById('status').textContent = 'Error: ' + error.message;
+        }
+    }
+    
+    function stopRecording() {
+        if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        isRecording = false;
+        document.getElementById('status').textContent = 'Recording stopped';
+        document.getElementById('status').style.background = '#e8f5e8';
+        document.getElementById('status').style.color = '#2e7d32';
+    }
+    
+    function captureStep() {
+        if (!screenStream || !isRecording) return;
+        
+        stepCounter++;
+        
+        // Create canvas to capture current screen
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.createElement('video');
+        
+        video.srcObject = screenStream;
+        video.play();
+        
+        video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to base64
+            const dataURL = canvas.toDataURL('image/png');
+            
+            // Store in localStorage
+            const stepData = {
+                step: stepCounter,
+                timestamp: new Date().toISOString(),
+                screenshot: dataURL
+            };
+            
+            const existingSteps = JSON.parse(localStorage.getItem('processSteps') || '[]');
+            existingSteps.push(stepData);
+            localStorage.setItem('processSteps', JSON.stringify(existingSteps));
+            
+            // Show success message
+            document.getElementById('status').textContent = `Step ${stepCounter} captured!`;
+            setTimeout(() => {
+                if (isRecording) {
+                    document.getElementById('status').textContent = 'Recording... Click "Mark Step" to capture screenshots';
+                }
+            }, 2000);
+        };
+    }
+    
+    // Keyboard shortcut
+    document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+            event.preventDefault();
+            captureStep();
+        }
+    });
+    </script>
+    
+    <div style="text-align: center; margin: 20px 0;">
+        <button onclick="startRecording()" style="background: #4CAF50; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 5px;">
+            Start Recording
+        </button>
+        <button onclick="stopRecording()" style="background: #f44336; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 5px;">
+            Stop Recording
+        </button>
+        <button onclick="captureStep()" style="background: #2196F3; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 5px;">
+            Mark Step
+        </button>
+    </div>
+    
+    <div id="status" style="text-align: center; padding: 10px; margin: 10px 0; border-radius: 5px; background: #e8f5e8; color: #2e7d32;">
+        Ready to start recording
+    </div>
+    """
+    
+    # Display the capture interface
+    st.markdown(capture_js, unsafe_allow_html=True)
     
     if st.button("📥 Load Captured Data", type="primary"):
         # This would load data from localStorage in a real implementation
