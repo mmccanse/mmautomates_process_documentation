@@ -456,7 +456,7 @@ def show_capture_interface():
     capture_html = create_capture_component()
     
     # Display the component and capture return value
-    component_value = html(capture_html, height=600, scrolling=True, key=f"capture_{st.session_state.component_key}")
+    component_value = html(capture_html, height=600, scrolling=True)
     
     # Process data from component
     if component_value:
