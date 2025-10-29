@@ -14,8 +14,7 @@ load_dotenv()
 # Configure Gemini API
 if 'GEMINI_API_KEY' in os.environ:
     genai.configure(api_key=os.environ['GEMINI_API_KEY'])
-    # Use the correct model name for the current API version
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-pro')
 else:
     model = None
 
@@ -70,6 +69,8 @@ def initialize_session_state():
         st.session_state.session_id = None
     if 'audio_data' not in st.session_state:
         st.session_state.audio_data = None
+    if 'component_key' not in st.session_state:
+        st.session_state.component_key = 0
 
 def start_recording():
     """Start the recording session"""
@@ -77,6 +78,7 @@ def start_recording():
     st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     st.session_state.steps = []
     st.session_state.audio_data = None
+    st.session_state.component_key += 1
 
 def stop_recording():
     """Stop the recording session"""
@@ -87,289 +89,11 @@ def add_step(step_data):
     if st.session_state.recording:
         step = {
             'id': len(st.session_state.steps) + 1,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': step_data.get('timestamp', datetime.now().isoformat()),
             'screenshot': step_data.get('screenshot'),
-            'note': step_data.get('note', '')
+            'note': step_data.get('note', f"Step {len(st.session_state.steps) + 1}")
         }
         st.session_state.steps.append(step)
-
-def get_capture_html():
-    """Get the HTML content for the capture interface"""
-    return """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Screen & Audio Capture</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .controls {
-            text-align: center;
-            margin: 20px 0;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .start-btn { background: #4CAF50; color: white; }
-        .stop-btn { background: #f44336; color: white; }
-        .capture-btn { background: #2196F3; color: white; }
-        .status {
-            text-align: center;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .recording { background: #ffebee; color: #c62828; }
-        .ready { background: #e8f5e8; color: #2e7d32; }
-        .screenshots {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .screenshot {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        .screenshot img {
-            width: 100%;
-            height: auto;
-            border-radius: 3px;
-        }
-        .screenshot-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Process Documenter - Screen & Audio Capture</h1>
-    
-    <div class="controls">
-        <button id="startBtn" class="start-btn">Start Recording</button>
-        <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
-        <button id="captureBtn" class="capture-btn" disabled>Mark Step</button>
-    </div>
-    
-    <div id="status" class="status ready">Ready to start recording</div>
-    
-    <div id="screenshots" class="screenshots"></div>
-    
-    <script>
-        let mediaRecorder;
-        let screenStream;
-        let audioStream;
-        let combinedStream;
-        let recordedChunks = [];
-        let stepCounter = 0;
-        
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const status = document.getElementById('status');
-        const screenshots = document.getElementById('screenshots');
-        
-        startBtn.addEventListener('click', startRecording);
-        stopBtn.addEventListener('click', stopRecording);
-        captureBtn.addEventListener('click', captureStep);
-        
-        async function startRecording() {
-            try {
-                // Request screen capture
-                screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { mediaSource: 'screen' },
-                    audio: false
-                });
-                
-                // Request audio capture
-                audioStream = await navigator.mediaDevices.getUserMedia({
-                    audio: true
-                });
-                
-                // Combine streams
-                combinedStream = new MediaStream([
-                    ...screenStream.getVideoTracks(),
-                    ...audioStream.getAudioTracks()
-                ]);
-                
-                // Set up media recorder
-                mediaRecorder = new MediaRecorder(combinedStream, {
-                    mimeType: 'video/webm;codecs=vp9,opus'
-                });
-                
-                recordedChunks = [];
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-                
-                mediaRecorder.start(1000); // Collect data every second
-                
-                // Update UI
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                captureBtn.disabled = false;
-                status.textContent = 'Recording... Click "Mark Step" to capture screenshots';
-                status.className = 'status recording';
-                
-                // Handle screen share end
-                screenStream.getVideoTracks()[0].onended = () => {
-                    stopRecording();
-                };
-                
-            } catch (error) {
-                console.error('Error starting recording:', error);
-                status.textContent = 'Error: ' + error.message;
-                status.className = 'status';
-            }
-        }
-        
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-            }
-            
-            // Stop all tracks
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-            }
-            if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
-            }
-            
-            // Update UI
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            captureBtn.disabled = true;
-            status.textContent = 'Recording stopped. You can start a new session.';
-            status.className = 'status ready';
-            
-            // Generate final video
-            if (recordedChunks.length > 0) {
-                generateVideo();
-            }
-        }
-        
-        function captureStep() {
-            if (!screenStream) return;
-            
-            stepCounter++;
-            
-            // Create canvas to capture current screen
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const video = document.createElement('video');
-            
-            video.srcObject = screenStream;
-            video.play();
-            
-            video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                // Draw current frame
-                ctx.drawImage(video, 0, 0);
-                
-                // Convert to blob
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    
-                    // Create screenshot element
-                    const screenshotDiv = document.createElement('div');
-                    screenshotDiv.className = 'screenshot';
-                    screenshotDiv.innerHTML = `
-                        <img src="${url}" alt="Step ${stepCounter}">
-                        <div class="screenshot-info">
-                            Step ${stepCounter}<br>
-                            ${new Date().toLocaleTimeString()}
-                        </div>
-                    `;
-                    
-                    screenshots.appendChild(screenshotDiv);
-                    
-                    // Store data for later processing
-                    storeStepData(blob, stepCounter);
-                }, 'image/png');
-            };
-        }
-        
-        function storeStepData(blob, stepNumber) {
-            // Convert blob to base64 for storage
-            const reader = new FileReader();
-            reader.onload = () => {
-                const stepData = {
-                    step: stepNumber,
-                    timestamp: new Date().toISOString(),
-                    screenshot: reader.result,
-                    audio: null // Will be filled when recording stops
-                };
-                
-                // Store in localStorage
-                const existingSteps = JSON.parse(localStorage.getItem('processSteps') || '[]');
-                existingSteps.push(stepData);
-                localStorage.setItem('processSteps', JSON.stringify(existingSteps));
-            };
-            reader.readAsDataURL(blob);
-        }
-        
-        function generateVideo() {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            
-            // Store video data
-            const reader = new FileReader();
-            reader.onload = () => {
-                const videoData = {
-                    timestamp: new Date().toISOString(),
-                    video: reader.result,
-                    duration: recordedChunks.length
-                };
-                localStorage.setItem('processVideo', JSON.stringify(videoData));
-            };
-            reader.readAsDataURL(blob);
-            
-            // Show download link
-            const downloadLink = document.createElement('a');
-            downloadLink.href = url;
-            downloadLink.download = `process_recording_${Date.now()}.webm`;
-            downloadLink.textContent = 'Download Recording';
-            downloadLink.style.display = 'block';
-            downloadLink.style.textAlign = 'center';
-            downloadLink.style.margin = '20px 0';
-            downloadLink.style.padding = '10px';
-            downloadLink.style.backgroundColor = '#4CAF50';
-            downloadLink.style.color = 'white';
-            downloadLink.style.textDecoration = 'none';
-            downloadLink.style.borderRadius = '5px';
-            
-            document.body.appendChild(downloadLink);
-        }
-        
-        // Keyboard shortcut for marking steps
-        document.addEventListener('keydown', (event) => {
-            if (event.ctrlKey && event.shiftKey && event.key === 'S') {
-                event.preventDefault();
-                if (!captureBtn.disabled) {
-                    captureStep();
-                }
-            }
-        });
-    </script>
-</body>
-</html>
-"""
 
 def create_capture_component():
     """Create a proper Streamlit component for screen capture"""
@@ -460,7 +184,7 @@ def create_capture_component():
             <div class="controls">
                 <button id="startBtn" class="start-btn">Start Recording</button>
                 <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
-                <button id="captureBtn" class="capture-btn" disabled>Mark Step</button>
+                <button id="captureBtn" class="capture-btn" disabled>Mark Step (Ctrl+Shift+S)</button>
             </div>
             
             <div id="status" class="status ready">Ready to start recording</div>
@@ -480,6 +204,7 @@ def create_capture_component():
                 
                 this.initializeElements();
                 this.bindEvents();
+                this.setupStreamlitCommunication();
             }
             
             initializeElements() {
@@ -499,8 +224,20 @@ def create_capture_component():
                 document.addEventListener('keydown', (event) => {
                     if (event.ctrlKey && event.shiftKey && event.key === 'S') {
                         event.preventDefault();
-                        this.captureStep();
+                        if (this.isRecording) {
+                            this.captureStep();
+                        }
                     }
+                });
+            }
+            
+            setupStreamlitCommunication() {
+                // Set the Streamlit component to auto-height
+                window.addEventListener('load', () => {
+                    window.parent.postMessage({
+                        type: 'streamlit:setComponentValue',
+                        value: { ready: true }
+                    }, '*');
                 });
             }
             
@@ -528,8 +265,15 @@ def create_capture_component():
                     });
                     
                     this.isRecording = true;
+                    this.stepCounter = 0;
+                    this.capturedSteps = [];
+                    this.screenshots.innerHTML = '';
+                    
                     this.updateUI();
                     this.updateStatus('Recording... Click "Mark Step" to capture screenshots', 'recording');
+                    
+                    // Notify Streamlit that recording started
+                    this.sendToStreamlit({ action: 'recording_started' });
                     
                     // Handle screen share end
                     this.screenStream.getVideoTracks()[0].onended = () => {
@@ -552,10 +296,14 @@ def create_capture_component():
                 
                 this.isRecording = false;
                 this.updateUI();
-                this.updateStatus(`Recording stopped. Captured ${this.stepCounter} steps.`, 'ready');
+                this.updateStatus(`Recording stopped. Captured ${this.stepCounter} steps.`, 'success');
                 
-                // Send data to parent window
-                this.sendDataToParent();
+                // Send all captured data to Streamlit
+                this.sendToStreamlit({ 
+                    action: 'recording_stopped',
+                    steps: this.capturedSteps,
+                    totalSteps: this.stepCounter
+                });
             }
             
             async captureStep() {
@@ -575,33 +323,43 @@ def create_capture_component():
                     video.srcObject = this.screenStream;
                     video.play();
                     
-                    video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        ctx.drawImage(video, 0, 0);
-                        
-                        // Convert to base64
-                        const dataURL = canvas.toDataURL('image/png');
-                        
-                        // Store step data
-                        const stepData = {
-                            step: this.stepCounter,
-                            timestamp: new Date().toISOString(),
-                            screenshot: dataURL,
-                            note: `Step ${this.stepCounter}`
+                    await new Promise((resolve) => {
+                        video.onloadedmetadata = () => {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            ctx.drawImage(video, 0, 0);
+                            
+                            // Convert to base64
+                            const dataURL = canvas.toDataURL('image/png');
+                            
+                            // Store step data
+                            const stepData = {
+                                step: this.stepCounter,
+                                timestamp: new Date().toISOString(),
+                                screenshot: dataURL,
+                                note: `Step ${this.stepCounter}`
+                            };
+                            
+                            this.capturedSteps.push(stepData);
+                            this.displayScreenshot(stepData);
+                            this.updateStatus(`Step ${this.stepCounter} captured!`, 'success');
+                            
+                            // Send individual step to Streamlit immediately
+                            this.sendToStreamlit({
+                                action: 'step_captured',
+                                step: stepData
+                            });
+                            
+                            // Reset status after 2 seconds
+                            setTimeout(() => {
+                                if (this.isRecording) {
+                                    this.updateStatus('Recording... Click "Mark Step" to capture screenshots', 'recording');
+                                }
+                            }, 2000);
+                            
+                            resolve();
                         };
-                        
-                        this.capturedSteps.push(stepData);
-                        this.displayScreenshot(stepData);
-                        this.updateStatus(`Step ${this.stepCounter} captured!`, 'success');
-                        
-                        // Reset status after 2 seconds
-                        setTimeout(() => {
-                            if (this.isRecording) {
-                                this.updateStatus('Recording... Click "Mark Step" to capture screenshots', 'recording');
-                            }
-                        }, 2000);
-                    };
+                    });
                     
                 } catch (error) {
                     console.error('Error capturing step:', error);
@@ -650,17 +408,14 @@ def create_capture_component():
                 this.updateStatus(message, 'error');
             }
             
-            sendDataToParent() {
-                // Send data to parent window (Streamlit)
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'capture_data',
-                        data: this.capturedSteps
-                    }, '*');
-                }
+            sendToStreamlit(data) {
+                // Send data to Streamlit parent window
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: data
+                }, '*');
                 
-                // Also store in localStorage for persistence
-                localStorage.setItem('processSteps', JSON.stringify(this.capturedSteps));
+                console.log('Sent to Streamlit:', data);
             }
         }
         
@@ -691,31 +446,50 @@ def show_capture_interface():
     2. **Allow screen sharing** when prompted (select the window/tab you want to record)
     3. **Allow microphone access** when prompted
     4. **Mark Steps** by clicking the "Mark Step" button or pressing `Ctrl+Shift+S`
-    5. **Stop Recording** when finished
+    5. **Stop Recording** when finished - captured steps will automatically load
     6. **Generate Documentation** to create AI-powered instructions
     
     **Supported Browsers:** Chrome, Edge, Firefox (latest versions)
     """)
     
-    # Use Streamlit's HTML component properly
+    # Use Streamlit's HTML component with communication
     capture_html = create_capture_component()
     
-    # Display the component
-    html(capture_html, height=600, scrolling=True)
+    # Display the component and capture return value
+    component_value = html(capture_html, height=600, scrolling=True, key=f"capture_{st.session_state.component_key}")
     
-    # Load captured data button
-    if st.button("📥 Load Captured Data", type="primary"):
-        # In a real implementation, this would communicate with the component
-        st.info("In a real implementation, this would load the captured screenshots and audio from the component.")
-        st.success("✅ Mock data loaded! This simulates loading captured steps.")
+    # Process data from component
+    if component_value:
+        process_component_data(component_value)
+
+def process_component_data(data):
+    """Process data received from the capture component"""
+    if not data or not isinstance(data, dict):
+        return
+    
+    action = data.get('action')
+    
+    if action == 'step_captured':
+        # Add the captured step immediately
+        step_data = data.get('step')
+        if step_data and st.session_state.recording:
+            add_step(step_data)
+            st.success(f"✅ Step {step_data.get('step')} captured and loaded!")
+            st.rerun()
+    
+    elif action == 'recording_stopped':
+        # Load all steps when recording stops
+        steps = data.get('steps', [])
+        total = data.get('totalSteps', 0)
         
-        # Add some mock steps for demonstration
-        for i in range(3):
-            add_step({
-                'screenshot': f"data:image/png;base64,mock_screenshot_{i+1}",
-                'note': f"Step {i+1}: Mock captured step"
-            })
-        st.rerun()
+        if steps:
+            # Clear existing steps and load new ones
+            st.session_state.steps = []
+            for step_data in steps:
+                add_step(step_data)
+            
+            st.success(f"✅ Recording stopped! {total} steps captured and loaded.")
+            st.rerun()
 
 def generate_documentation():
     """Generate documentation using Gemini AI"""
@@ -733,44 +507,57 @@ def generate_documentation():
         
         # Add instructions
         instructions = """
-        You are an expert technical writer creating step-by-step process documentation for accounting and finance teams.
-        
-        I will provide you with screenshots and audio narration from a user demonstrating a process.
-        Please create clear, professional documentation that includes:
-        
-        1. A descriptive title
-        2. Purpose/overview
-        3. Prerequisites
-        4. Numbered step-by-step instructions
-        5. Clear action descriptions for each step
-        
-        Make the instructions concise but complete. Use imperative language ("Click the...", "Enter...", "Select...").
-        Focus on what the user needs to do, not what the system is doing.
-        """
+You are an expert technical writer creating step-by-step process documentation for accounting and finance teams.
+
+I will provide you with screenshots from a user demonstrating a process.
+Please create clear, professional documentation that includes:
+
+1. A descriptive title
+2. Purpose/overview
+3. Prerequisites (if applicable)
+4. Numbered step-by-step instructions
+5. Clear action descriptions for each step
+
+Make the instructions concise but complete. Use imperative language ("Click the...", "Enter...", "Select...").
+Focus on what the user needs to do, not what the system is doing.
+Format the output in clean markdown.
+"""
         
         content_parts.append(instructions)
         
-        # Add each step
+        # Add each step with screenshot
         for i, step in enumerate(st.session_state.steps, 1):
-            step_text = f"Step {i}:\n"
+            step_text = f"\n\n--- Step {i} ---\n"
             if step.get('note'):
-                step_text += f"User note: {step['note']}\n"
+                step_text += f"Note: {step['note']}\n"
             step_text += f"Timestamp: {step['timestamp']}\n"
             
             content_parts.append(step_text)
             
             # Add screenshot if available
             if step.get('screenshot'):
-                content_parts.append(step['screenshot'])
+                # For Gemini, we need to convert the data URL to proper format
+                screenshot_data = step['screenshot']
+                if screenshot_data.startswith('data:image'):
+                    # Extract base64 data
+                    base64_data = screenshot_data.split(',')[1]
+                    image_bytes = base64.b64decode(base64_data)
+                    
+                    # Create PIL Image for Gemini
+                    from PIL import Image
+                    image = Image.open(io.BytesIO(image_bytes))
+                    content_parts.append(image)
         
         # Generate documentation
-        with st.spinner("🤖 AI is generating your documentation..."):
+        with st.spinner("🤖 AI is analyzing your screenshots and generating documentation..."):
             response = model.generate_content(content_parts)
             
         return response.text
         
     except Exception as e:
         st.error(f"Error generating documentation: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
         return None
 
 def main():
@@ -790,7 +577,7 @@ def main():
         **Setup Required**: To use AI features, you need to configure your Gemini API key.
         
         1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-        2. Set the environment variable: `GEMINI_API_KEY=your_key_here`
+        2. Create a `.env` file in your project directory with: `GEMINI_API_KEY=your_key_here`
         3. Restart the app
         """)
     
@@ -806,81 +593,95 @@ def main():
                 start_recording()
                 st.rerun()
         else:
-            st.markdown('<div class="recording-indicator">🔴 Recording...</div>', unsafe_allow_html=True)
+            st.markdown('<div class="recording-indicator">🔴 Recording in Progress</div>', unsafe_allow_html=True)
+            st.info("💡 Use Ctrl+Shift+S to quickly mark steps, or click the button in the capture interface below")
             
             # Show capture interface
             show_capture_interface()
             
-            # Recording controls
-            col_a, col_b = st.columns(2)
-            with col_a:
-                if st.button("📸 Mark Step (Manual)", use_container_width=True):
-                    # Manual step marking for testing
-                    add_step({
-                        'screenshot': f"mock_screenshot_{len(st.session_state.steps) + 1}",
-                        'note': f"Manual Step {len(st.session_state.steps) + 1}"
-                    })
-                    st.success(f"Step {len(st.session_state.steps)} captured!")
-                    st.rerun()
-            
-            with col_b:
-                if st.button("⏹️ Stop Recording", use_container_width=True):
-                    stop_recording()
-                    st.rerun()
+            # Stop recording button
+            if st.button("⏹️ Stop Recording", type="secondary", use_container_width=True):
+                stop_recording()
+                st.rerun()
             
             # Current steps
             if st.session_state.steps:
                 st.subheader(f"📋 Captured Steps ({len(st.session_state.steps)})")
                 for step in st.session_state.steps:
-                    with st.expander(f"Step {step['id']}: {step['note']}"):
+                    with st.expander(f"Step {step['id']}: {step['note']}", expanded=False):
                         st.write(f"**Timestamp:** {step['timestamp']}")
                         if step.get('screenshot', '').startswith('data:image'):
-                            st.image(step['screenshot'], caption=f"Screenshot for Step {step['id']}")
-                        else:
-                            st.write(f"**Screenshot:** {step.get('screenshot', 'Not available')}")
+                            st.image(step['screenshot'], caption=f"Screenshot for Step {step['id']}", use_container_width=True)
     
     with col2:
         st.subheader("📄 Documentation")
         
         if st.session_state.steps and not st.session_state.recording:
+            st.success(f"✅ {len(st.session_state.steps)} steps ready for documentation")
+            
             if st.button("🤖 Generate Documentation", type="primary", use_container_width=True):
                 doc = generate_documentation()
                 if doc:
                     st.success("Documentation generated successfully!")
-                    st.text_area("Generated Documentation", doc, height=400)
+                    
+                    # Display in expandable section
+                    with st.expander("📄 View Generated Documentation", expanded=True):
+                        st.markdown(doc)
                     
                     # Download button
                     st.download_button(
                         label="📥 Download as Markdown",
                         data=doc,
                         file_name=f"process_documentation_{st.session_state.session_id}.md",
-                        mime="text/markdown"
+                        mime="text/markdown",
+                        use_container_width=True
                     )
+        elif st.session_state.recording:
+            st.info("⏸️ Stop recording first to generate documentation")
         else:
-            st.info("Record some steps first, then generate documentation")
+            st.info("📸 Record some steps first, then generate documentation")
+        
+        # Session info
+        if st.session_state.session_id:
+            st.markdown("---")
+            st.caption(f"Session ID: {st.session_state.session_id}")
+            if st.button("🔄 Start New Session", use_container_width=True):
+                st.session_state.steps = []
+                st.session_state.session_id = None
+                st.session_state.recording = False
+                st.rerun()
     
     # Instructions
-    with st.expander("ℹ️ How to Use"):
+    with st.expander("ℹ️ How to Use This Tool"):
         st.markdown("""
         ### Getting Started
         
         1. **Start Recording**: Click the "Start Recording" button
-        2. **Demonstrate Process**: Perform your workflow while talking through it
-        3. **Mark Steps**: Press "Mark Step" at key moments (or use Ctrl+Shift+S hotkey)
-        4. **Stop Recording**: Click "Stop Recording" when finished
-        5. **Generate Docs**: Click "Generate Documentation" to create AI-powered documentation
+        2. **Grant Permissions**: Allow screen sharing and microphone access when prompted
+        3. **Demonstrate Process**: Perform your workflow on the screen you're sharing
+        4. **Mark Steps**: Press `Ctrl+Shift+S` or click "Mark Step" at important moments
+        5. **Stop Recording**: Click "Stop Recording" when finished
+        6. **Generate Docs**: Click "Generate Documentation" to create AI-powered instructions
         
         ### Tips for Better Documentation
         
-        - **Speak clearly** while demonstrating
-        - **Mark steps** at important decision points
-        - **Explain what you're doing** as you do it
-        - **Include context** about why each step matters
+        - **Mark key decision points** - Don't capture every click, just important steps
+        - **Show clear screens** - Make sure relevant information is visible
+        - **Capture in sequence** - Follow your normal workflow from start to finish
+        - **Include context** - Capture screens that show where you are in the process
         
         ### Privacy Note
         
-        This prototype sends screenshots and audio to Google's Gemini AI for processing.
-        In a production environment, additional privacy controls would be implemented.
+        - Screenshots are processed locally in your browser
+        - Only marked screenshots are sent to Google's Gemini AI for documentation generation
+        - No continuous video recording is uploaded
+        - Audio is captured but not currently sent to AI (future feature)
+        
+        ### Troubleshooting
+        
+        - If steps don't appear immediately, wait a moment after clicking "Mark Step"
+        - Make sure you're using Chrome, Edge, or Firefox (latest version)
+        - If screen sharing stops unexpectedly, you may need to start a new recording session
         """)
 
 if __name__ == "__main__":
