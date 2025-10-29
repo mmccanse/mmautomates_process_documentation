@@ -685,9 +685,8 @@ def create_google_doc(markdown_text, frames, creds):
 def authenticate_google():
     """Authenticate with Google using OAuth"""
     try:
-        from google_auth_oauthlib.flow import Flow
+        from google_auth_oauthlib.flow import InstalledAppFlow
         from google.auth.transport.requests import Request
-        import pickle
         
         SCOPES = ['https://www.googleapis.com/auth/documents', 
                   'https://www.googleapis.com/auth/drive.file']
@@ -718,48 +717,49 @@ def authenticate_google():
                     """)
                     return None
                 
-                flow = Flow.from_client_secrets_file(
+                flow = InstalledAppFlow.from_client_secrets_file(
                     'credentials.json',
-                    scopes=SCOPES,
-                    redirect_uri='urn:ietf:wg:oauth:2.0:oob'
+                    scopes=SCOPES
                 )
                 
-                auth_url, _ = flow.authorization_url(prompt='consent')
+                # Let Google handle the local server automatically
+                # port=0 means pick any available port
+                try:
+                    creds = flow.run_local_server(port=0)
+                except Exception as server_error:
+                    st.error(f"Could not open browser: {str(server_error)}")
+                    st.info("Trying alternative authentication method...")
+                    try:
+                        creds = flow.run_console()
+                    except Exception as console_error:
+                        st.error(f"Authentication failed: {str(console_error)}")
+                        return None
                 
-                st.info(f"Please visit this URL to authorize: {auth_url}")
-                code = st.text_input("Enter the authorization code:")
-                
-                if code:
-                    flow.fetch_token(code=code)
-                    creds = flow.credentials
-                    
-                    # Save credentials
-                    with open('token.pickle', 'wb') as token:
-                        pickle.dump(creds, token)
-                else:
-                    return None
-            
+                # Save credentials
+                with open('token.pickle', 'wb') as token:
+                    pickle.dump(creds, token)
+        
         return creds
         
     except Exception as e:
         st.error(f"Authentication error: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
         return None
 
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
     st.markdown("### 📝 Edit Key Moments")
-    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or check the box to delete unwanted ones.")
+    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or delete unwanted ones.")
     
     edited_moments = []
+    deleted_indices = []
     
     # Display each moment with edit controls
     for i, moment in enumerate(key_moments):
+        # Check if this moment should be shown
         with st.container():
-            col0, col1, col2, col3 = st.columns([0.5, 1, 2, 4])
-            
-            with col0:
-                # Delete checkbox
-                delete = st.checkbox("", key=f"delete_{i}", help="Check to delete")
+            col1, col2, col3, col4 = st.columns([1, 2, 4, 1])
             
             with col1:
                 # Editable timestamp
@@ -767,8 +767,7 @@ def show_moment_editor(key_moments):
                     "Time",
                     value=moment['timestamp'],
                     key=f"time_{i}",
-                    label_visibility="collapsed",
-                    disabled=delete
+                    label_visibility="collapsed"
                 )
             
             with col2:
@@ -783,8 +782,7 @@ def show_moment_editor(key_moments):
                     options=type_options,
                     index=type_options.index(current_type),
                     key=f"type_{i}",
-                    label_visibility="collapsed",
-                    disabled=delete
+                    label_visibility="collapsed"
                 )
             
             with col3:
@@ -794,24 +792,27 @@ def show_moment_editor(key_moments):
                     value=moment['description'],
                     height=60,
                     key=f"desc_{i}",
-                    label_visibility="collapsed",
-                    disabled=delete
+                    label_visibility="collapsed"
                 )
                 
                 # Navigation path (only for navigation type)
-                if new_type == 'navigation' and not delete:
+                if new_type == 'navigation':
                     new_nav_path = st.text_input(
                         "Navigation Path",
                         value=moment.get('navigation_path', ''),
                         key=f"nav_{i}",
-                        placeholder="Menu > Options > Add Account",
-                        disabled=delete
+                        placeholder="Menu > Options > Add Account"
                     )
                 else:
                     new_nav_path = None
             
-            # Only add if not marked for deletion
-            if not delete:
+            with col4:
+                # Delete button
+                if st.button("❌", key=f"delete_{i}", help="Delete this moment"):
+                    deleted_indices.append(i)
+            
+            # Add to edited list if not marked for deletion
+            if i not in deleted_indices:
                 edited_moment = {
                     'timestamp': new_timestamp,
                     'type': new_type,
@@ -819,39 +820,8 @@ def show_moment_editor(key_moments):
                     'navigation_path': new_nav_path
                 }
                 edited_moments.append(edited_moment)
-            else:
-                st.caption("🗑️ This moment will be deleted when you apply changes")
             
             st.markdown("---")
-    
-    # Add new moment section
-    with st.expander("➕ Add New Moment"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            new_timestamp = st.text_input("Timestamp (MM:SS)", key="new_time", placeholder="2:30")
-            new_type = st.selectbox("Type", options=['navigation', 'action', 'data_entry', 'decision', 'submission'], key="new_type")
-        
-        with col2:
-            new_description = st.text_area("Description", key="new_desc", height=100)
-            if new_type == 'navigation':
-                new_nav_path = st.text_input("Navigation Path", key="new_nav", placeholder="Menu > Options > Add Account")
-            else:
-                new_nav_path = None
-        
-        if st.button("➕ Add This Moment"):
-            if new_timestamp and new_description:
-                edited_moments.append({
-                    'timestamp': new_timestamp,
-                    'type': new_type,
-                    'description': new_description,
-                    'navigation_path': new_nav_path
-                })
-                st.success("Moment added! Click 'Apply Changes' below to update.")
-            else:
-                st.error("Please enter both timestamp and description")
-    
-    return edited_moments
     
     # Add new moment section
     with st.expander("➕ Add New Moment"):
