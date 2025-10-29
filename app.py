@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 from streamlit.components.v1 import html
+import time
 
 # Load environment variables
 load_dotenv()
@@ -86,14 +87,13 @@ def stop_recording():
 
 def add_step(step_data):
     """Add a step to the current session"""
-    if st.session_state.recording:
-        step = {
-            'id': len(st.session_state.steps) + 1,
-            'timestamp': step_data.get('timestamp', datetime.now().isoformat()),
-            'screenshot': step_data.get('screenshot'),
-            'note': step_data.get('note', f"Step {len(st.session_state.steps) + 1}")
-        }
-        st.session_state.steps.append(step)
+    step = {
+        'id': len(st.session_state.steps) + 1,
+        'timestamp': step_data.get('timestamp', datetime.now().isoformat()),
+        'screenshot': step_data.get('screenshot'),
+        'note': step_data.get('note', f"Step {len(st.session_state.steps) + 1}")
+    }
+    st.session_state.steps.append(step)
 
 def create_capture_component():
     """Create a proper Streamlit component for screen capture"""
@@ -204,7 +204,7 @@ def create_capture_component():
                 
                 this.initializeElements();
                 this.bindEvents();
-                this.setupStreamlitCommunication();
+                this.loadFromStorage();
             }
             
             initializeElements() {
@@ -231,19 +231,37 @@ def create_capture_component():
                 });
             }
             
-            setupStreamlitCommunication() {
-                // Set the Streamlit component to auto-height
-                window.addEventListener('load', () => {
-                    window.parent.postMessage({
-                        type: 'streamlit:setComponentValue',
-                        value: { ready: true }
-                    }, '*');
-                });
+            loadFromStorage() {
+                // Load any existing captured steps
+                const stored = localStorage.getItem('processSteps');
+                if (stored) {
+                    try {
+                        this.capturedSteps = JSON.parse(stored);
+                        this.stepCounter = this.capturedSteps.length;
+                        
+                        // Display stored screenshots
+                        this.capturedSteps.forEach(step => {
+                            this.displayScreenshot(step);
+                        });
+                        
+                        if (this.capturedSteps.length > 0) {
+                            this.updateStatus(`Loaded ${this.capturedSteps.length} steps from previous session`, 'success');
+                        }
+                    } catch (e) {
+                        console.error('Error loading stored steps:', e);
+                    }
+                }
             }
             
             async startRecording() {
                 try {
                     this.updateStatus('Requesting permissions...', 'ready');
+                    
+                    // Clear old data
+                    localStorage.removeItem('processSteps');
+                    this.capturedSteps = [];
+                    this.stepCounter = 0;
+                    this.screenshots.innerHTML = '';
                     
                     // Request screen capture
                     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -265,15 +283,9 @@ def create_capture_component():
                     });
                     
                     this.isRecording = true;
-                    this.stepCounter = 0;
-                    this.capturedSteps = [];
-                    this.screenshots.innerHTML = '';
                     
                     this.updateUI();
-                    this.updateStatus('Recording... Click "Mark Step" to capture screenshots', 'recording');
-                    
-                    // Notify Streamlit that recording started
-                    this.sendToStreamlit({ action: 'recording_started' });
+                    this.updateStatus('🔴 Recording... Click "Mark Step" to capture screenshots', 'recording');
                     
                     // Handle screen share end
                     this.screenStream.getVideoTracks()[0].onended = () => {
@@ -296,14 +308,11 @@ def create_capture_component():
                 
                 this.isRecording = false;
                 this.updateUI();
-                this.updateStatus(`Recording stopped. Captured ${this.stepCounter} steps.`, 'success');
                 
-                // Send all captured data to Streamlit
-                this.sendToStreamlit({ 
-                    action: 'recording_stopped',
-                    steps: this.capturedSteps,
-                    totalSteps: this.stepCounter
-                });
+                // Save to localStorage
+                this.saveToStorage();
+                
+                this.updateStatus(`✅ Recording stopped. ${this.stepCounter} steps captured. Click "Load Captured Steps" in Streamlit to import them.`, 'success');
             }
             
             async captureStep() {
@@ -342,18 +351,14 @@ def create_capture_component():
                             
                             this.capturedSteps.push(stepData);
                             this.displayScreenshot(stepData);
-                            this.updateStatus(`Step ${this.stepCounter} captured!`, 'success');
+                            this.saveToStorage();
                             
-                            // Send individual step to Streamlit immediately
-                            this.sendToStreamlit({
-                                action: 'step_captured',
-                                step: stepData
-                            });
+                            this.updateStatus(`✅ Step ${this.stepCounter} captured!`, 'success');
                             
                             // Reset status after 2 seconds
                             setTimeout(() => {
                                 if (this.isRecording) {
-                                    this.updateStatus('Recording... Click "Mark Step" to capture screenshots', 'recording');
+                                    this.updateStatus('🔴 Recording... Click "Mark Step" to capture screenshots', 'recording');
                                 }
                             }, 2000);
                             
@@ -379,6 +384,16 @@ def create_capture_component():
                 `;
                 
                 this.screenshots.appendChild(screenshotDiv);
+            }
+            
+            saveToStorage() {
+                try {
+                    localStorage.setItem('processSteps', JSON.stringify(this.capturedSteps));
+                    console.log(`Saved ${this.capturedSteps.length} steps to localStorage`);
+                } catch (e) {
+                    console.error('Error saving to localStorage:', e);
+                    this.updateStatus('Warning: Could not save data (storage full?)', 'error');
+                }
             }
             
             updateUI() {
@@ -407,16 +422,6 @@ def create_capture_component():
                 
                 this.updateStatus(message, 'error');
             }
-            
-            sendToStreamlit(data) {
-                // Send data to Streamlit parent window
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: data
-                }, '*');
-                
-                console.log('Sent to Streamlit:', data);
-            }
         }
         
         // Initialize when DOM is loaded
@@ -428,6 +433,37 @@ def create_capture_component():
     </html>
     """
     return html_content
+
+def load_steps_from_component():
+    """Load captured steps from localStorage via a helper component"""
+    reader_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <script>
+            // Read from localStorage and send to parent
+            const steps = localStorage.getItem('processSteps');
+            if (steps) {
+                // Send to Streamlit via query parameter hack
+                const data = JSON.parse(steps);
+                document.body.innerHTML = '<pre style="display:none;" id="data">' + JSON.stringify(data) + '</pre>';
+                
+                // Also try to communicate via title
+                document.title = 'DATA:' + steps;
+            } else {
+                document.body.innerHTML = '<pre style="display:none;" id="data">[]</pre>';
+                document.title = 'DATA:[]';
+            }
+        </script>
+    </body>
+    </html>
+    """
+    
+    # This won't actually work to return data, but we'll use a different approach
+    html(reader_html, height=0)
 
 def show_capture_interface():
     """Show the screen capture interface using proper Streamlit components"""
@@ -446,50 +482,73 @@ def show_capture_interface():
     2. **Allow screen sharing** when prompted (select the window/tab you want to record)
     3. **Allow microphone access** when prompted
     4. **Mark Steps** by clicking the "Mark Step" button or pressing `Ctrl+Shift+S`
-    5. **Stop Recording** when finished - captured steps will automatically load
-    6. **Generate Documentation** to create AI-powered instructions
+    5. **Stop Recording** when finished
+    6. **Click "Load Captured Steps"** button to import your screenshots
+    7. **Generate Documentation** to create AI-powered instructions
     
     **Supported Browsers:** Chrome, Edge, Firefox (latest versions)
     """)
     
-    # Use Streamlit's HTML component with communication
+    # Use Streamlit's HTML component
     capture_html = create_capture_component()
+    html(capture_html, height=600, scrolling=True)
     
-    # Display the component and capture return value
-    component_value = html(capture_html, height=600, scrolling=True)
+    # Add a manual load button
+    st.markdown("---")
+    col1, col2 = st.columns(2)
     
-    # Process data from component
-    if component_value:
-        process_component_data(component_value)
-
-def process_component_data(data):
-    """Process data received from the capture component"""
-    if not data or not isinstance(data, dict):
-        return
-    
-    action = data.get('action')
-    
-    if action == 'step_captured':
-        # Add the captured step immediately
-        step_data = data.get('step')
-        if step_data and st.session_state.recording:
-            add_step(step_data)
-            st.success(f"✅ Step {step_data.get('step')} captured and loaded!")
-            st.rerun()
-    
-    elif action == 'recording_stopped':
-        # Load all steps when recording stops
-        steps = data.get('steps', [])
-        total = data.get('totalSteps', 0)
-        
-        if steps:
-            # Clear existing steps and load new ones
-            st.session_state.steps = []
-            for step_data in steps:
-                add_step(step_data)
+    with col1:
+        if st.button("📥 Load Captured Steps", type="primary", use_container_width=True):
+            # JavaScript to read localStorage
+            js_code = """
+            <script>
+                const steps = localStorage.getItem('processSteps');
+                if (steps) {
+                    const data = JSON.parse(steps);
+                    // Store in a way Streamlit can access
+                    const event = new CustomEvent('streamlit:setValue', { detail: data });
+                    window.dispatchEvent(event);
+                    alert('Found ' + data.length + ' steps. Copy this and paste in the text area below:\\n\\n' + steps);
+                } else {
+                    alert('No captured steps found. Make sure you captured some steps first!');
+                }
+            </script>
+            """
+            st.components.v1.html(js_code, height=0)
             
-            st.success(f"✅ Recording stopped! {total} steps captured and loaded.")
-            st.rerun()
+    with col2:
+        if st.button("🗑️ Clear Browser Storage", use_container_width=True):
+            clear_js = """
+            <script>
+                localStorage.removeItem('processSteps');
+                alert('Browser storage cleared!');
+            </script>
+            """
+            st.components.v1.html(clear_js, height=0)
+    
+    # Manual data import area
+    st.markdown("### Manual Import (Temporary Workaround)")
+    st.info("👆 Click 'Load Captured Steps', then copy the data from the alert and paste it below:")
+    
+    data_input = st.text_area(
+        "Paste captured steps JSON here:",
+        height=150,
+        placeholder='[{"step": 1, "timestamp": "...", "screenshot": "data:image/png;base64,...", "note": "Step 1"}]'
+    )
+    
+    if st.button("Import Pasted Data", use_container_width=True):
+        if data_input.strip():
+            try:
+                steps_data = json.loads(data_input)
+                st.session_state.steps = []
+                for step_data in steps_data:
+                    add_step(step_data)
+                st.success(f"✅ Successfully imported {len(steps_data)} steps!")
+                st.rerun()
+            except json.JSONDecodeError as e:
+                st.error(f"Invalid JSON data: {str(e)}")
+        else:
+            st.warning("Please paste the JSON data first")
 
 def generate_documentation():
     """Generate documentation using Gemini AI"""
@@ -603,15 +662,16 @@ def main():
             if st.button("⏹️ Stop Recording", type="secondary", use_container_width=True):
                 stop_recording()
                 st.rerun()
-            
-            # Current steps
-            if st.session_state.steps:
-                st.subheader(f"📋 Captured Steps ({len(st.session_state.steps)})")
-                for step in st.session_state.steps:
-                    with st.expander(f"Step {step['id']}: {step['note']}", expanded=False):
-                        st.write(f"**Timestamp:** {step['timestamp']}")
-                        if step.get('screenshot', '').startswith('data:image'):
-                            st.image(step['screenshot'], caption=f"Screenshot for Step {step['id']}", use_container_width=True)
+        
+        # Current steps
+        if st.session_state.steps:
+            st.markdown("---")
+            st.subheader(f"📋 Loaded Steps ({len(st.session_state.steps)})")
+            for step in st.session_state.steps:
+                with st.expander(f"Step {step['id']}: {step['note']}", expanded=False):
+                    st.write(f"**Timestamp:** {step['timestamp']}")
+                    if step.get('screenshot', '').startswith('data:image'):
+                        st.image(step['screenshot'], caption=f"Screenshot for Step {step['id']}", use_container_width=True)
     
     with col2:
         st.subheader("📄 Documentation")
@@ -637,9 +697,9 @@ def main():
                         use_container_width=True
                     )
         elif st.session_state.recording:
-            st.info("⏸️ Stop recording first to generate documentation")
+            st.info("⏸️ Stop recording first, then load your captured steps")
         else:
-            st.info("📸 Record some steps first, then generate documentation")
+            st.info("📸 Record and load some steps first, then generate documentation")
         
         # Session info
         if st.session_state.session_id:
@@ -661,7 +721,18 @@ def main():
         3. **Demonstrate Process**: Perform your workflow on the screen you're sharing
         4. **Mark Steps**: Press `Ctrl+Shift+S` or click "Mark Step" at important moments
         5. **Stop Recording**: Click "Stop Recording" when finished
-        6. **Generate Docs**: Click "Generate Documentation" to create AI-powered instructions
+        6. **Load Steps**: Click "Load Captured Steps" and follow the import instructions
+        7. **Generate Docs**: Click "Generate Documentation" to create AI-powered instructions
+        
+        ### Current Limitation
+        
+        Due to browser security restrictions, there's an extra step to import your captured screenshots:
+        - After stopping recording, click "Load Captured Steps"
+        - Copy the JSON data from the alert popup
+        - Paste it into the text area
+        - Click "Import Pasted Data"
+        
+        This is a temporary workaround - in a production app, this would be automated with a proper backend.
         
         ### Tips for Better Documentation
         
@@ -672,16 +743,10 @@ def main():
         
         ### Privacy Note
         
-        - Screenshots are processed locally in your browser
+        - Screenshots are stored in your browser's localStorage
         - Only marked screenshots are sent to Google's Gemini AI for documentation generation
         - No continuous video recording is uploaded
-        - Audio is captured but not currently sent to AI (future feature)
-        
-        ### Troubleshooting
-        
-        - If steps don't appear immediately, wait a moment after clicking "Mark Step"
-        - Make sure you're using Chrome, Edge, or Firefox (latest version)
-        - If screen sharing stops unexpectedly, you may need to start a new recording session
+        - Clear browser storage when done to remove all data
         """)
 
 if __name__ == "__main__":
