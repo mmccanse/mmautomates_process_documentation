@@ -68,10 +68,34 @@ def extract_audio_from_video(video_path):
     """Extract audio from video file"""
     try:
         with st.spinner("📹 Extracting audio from video..."):
-            video = VideoFileClip(video_path)
+            # Verify file exists and has content
+            if not os.path.exists(video_path):
+                raise FileNotFoundError(f"Video file not found: {video_path}")
+            
+            file_size = os.path.getsize(video_path)
+            if file_size == 0:
+                raise ValueError("Video file is empty")
+            
+            st.info(f"Video file size: {file_size / (1024*1024):.2f} MB")
+            
+            # Try to open video with error handling
+            try:
+                video = VideoFileClip(video_path)
+            except Exception as e:
+                st.error("The video file appears to be corrupted or incompatible.")
+                st.error("Please try:")
+                st.error("1. Re-exporting the video in MP4 format")
+                st.error("2. Using a smaller file size")
+                st.error("3. Using a different recording tool")
+                raise e
+            
+            # Check if video has audio
+            if video.audio is None:
+                video.close()
+                raise ValueError("Video file has no audio track. Please record with audio enabled.")
             
             # Create temporary audio file
-            audio_path = tempfile.NamedTemporaryFile(delete=False, suffix='.wav').name
+            audio_path = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3').name
             video.audio.write_audiofile(audio_path, verbose=False, logger=None)
             
             # Get video duration
@@ -80,6 +104,7 @@ def extract_audio_from_video(video_path):
             video.close()
             
             return audio_path, duration
+            
     except Exception as e:
         st.error(f"Error extracting audio: {str(e)}")
         return None, None
