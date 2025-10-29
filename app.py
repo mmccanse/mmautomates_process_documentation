@@ -7,6 +7,10 @@ import json
 from datetime import datetime
 from moviepy.editor import VideoFileClip
 import time
+import cv2
+from PIL import Image
+import io
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -50,6 +54,14 @@ st.markdown("""
         padding: 15px;
         margin: 10px 0;
     }
+    .moment-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,6 +75,12 @@ def initialize_session_state():
         st.session_state.video_path = None
     if 'audio_path' not in st.session_state:
         st.session_state.audio_path = None
+    if 'extracted_frames' not in st.session_state:
+        st.session_state.extracted_frames = None
+    if 'final_documentation' not in st.session_state:
+        st.session_state.final_documentation = None
+    if 'editing_mode' not in st.session_state:
+        st.session_state.editing_mode = False
 
 def extract_audio_from_video(video_path):
     """Extract audio from video file"""
@@ -113,74 +131,35 @@ def transcribe_audio_with_gemini(audio_path):
     """Transcribe audio using Gemini API"""
     try:
         with st.spinner("🎤 Transcribing audio with AI... This may take a minute..."):
-            # Read audio file as bytes
-            with open(audio_path, 'rb') as audio_file:
-                audio_data = audio_file.read()
+            # Read audio file
+            with open(audio_path, 'rb') as f:
+                audio_bytes = f.read()
             
-            # Create a Part object with the audio data
-            import google.generativeai as genai
-            from google.generativeai.types import File
+            # Create prompt
+            prompt = """
+            Please transcribe this audio recording. 
             
-            # Upload the file using the File API
-            try:
-                # Try the newer API first
-                uploaded_file = genai.upload_file(path=audio_path)
-                
-                # Wait for processing
-                import time
-                while uploaded_file.state.name == "PROCESSING":
-                    time.sleep(2)
-                    uploaded_file = genai.get_file(uploaded_file.name)
-                
-                if uploaded_file.state.name == "FAILED":
-                    raise ValueError("Audio processing failed")
-                
-                # Create prompt for transcription
-                prompt = """
-                Please transcribe this audio recording. 
-                
-                This is someone explaining an accounting or business process.
-                
-                Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
-                
-                Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
-                """
-                
-                # Generate transcription
-                response = model.generate_content([prompt, uploaded_file])
-                
-                # Clean up
-                genai.delete_file(uploaded_file.name)
-                
-                return response.text
-                
-            except AttributeError:
-                # Fallback: Use inline audio data
-                st.warning("Using alternative transcription method...")
-                
-                import base64
-                audio_b64 = base64.b64encode(audio_data).decode()
-                
-                prompt = """
-                Please transcribe this audio recording. 
-                
-                This is someone explaining an accounting or business process.
-                
-                Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
-                
-                Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
-                """
-                
-                # Try with inline data
-                response = model.generate_content([
-                    prompt,
-                    {
-                        "mime_type": "audio/mp3",
-                        "data": audio_b64
-                    }
-                ])
-                
-                return response.text
+            This is someone explaining an accounting or business process.
+            
+            Provide the transcript with approximate timestamps in the format [MM:SS] at the beginning of each major sentence or thought.
+            
+            Be accurate with the transcription, including any technical terms, system names, or navigation paths mentioned.
+            """
+            
+            # Generate transcription using File API
+            import mimetypes
+            mime_type = mimetypes.guess_type(audio_path)[0] or 'audio/mpeg'
+            
+            # Create file part
+            audio_part = {
+                "mime_type": mime_type,
+                "data": audio_bytes
+            }
+            
+            # Generate content
+            response = model.generate_content([prompt, audio_part])
+            
+            return response.text
             
     except Exception as e:
         st.error(f"Error transcribing audio: {str(e)}")
@@ -255,18 +234,268 @@ def analyze_transcript_for_key_moments(transcript):
         st.error(f"Details: {traceback.format_exc()}")
         return None
 
-def format_timestamp(timestamp_str):
-    """Convert timestamp string to seconds"""
+def timestamp_to_seconds(timestamp_str):
+    """Convert timestamp string (MM:SS or HH:MM:SS) to seconds"""
     try:
-        parts = timestamp_str.split(':')
+        parts = timestamp_str.strip().split(':')
         if len(parts) == 2:
             minutes, seconds = parts
-            return int(minutes) * 60 + int(seconds)
+            return int(minutes) * 60 + float(seconds)
         elif len(parts) == 3:
             hours, minutes, seconds = parts
-            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+            return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
     except:
         return 0
+
+def seconds_to_timestamp(seconds):
+    """Convert seconds to timestamp string (MM:SS)"""
+    mins = int(seconds // 60)
+    secs = int(seconds % 60)
+    return f"{mins}:{secs:02d}"
+
+def extract_frame_at_timestamp(video_path, timestamp_seconds):
+    """Extract a single frame from video at given timestamp"""
+    try:
+        cap = cv2.VideoCapture(video_path)
+        
+        # Set position to timestamp (in milliseconds)
+        cap.set(cv2.CAP_PROP_POS_MSEC, timestamp_seconds * 1000)
+        
+        # Read frame
+        success, frame = cap.read()
+        cap.release()
+        
+        if success:
+            # Convert BGR to RGB
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Convert to PIL Image
+            img = Image.fromarray(frame_rgb)
+            return img
+        else:
+            return None
+            
+    except Exception as e:
+        st.error(f"Error extracting frame at {timestamp_seconds}s: {str(e)}")
+        return None
+
+def extract_all_frames(video_path, key_moments):
+    """Extract frames for all key moments"""
+    frames = []
+    
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for i, moment in enumerate(key_moments):
+        timestamp_seconds = timestamp_to_seconds(moment['timestamp'])
+        status_text.text(f"Extracting frame {i+1}/{len(key_moments)} at {moment['timestamp']}...")
+        
+        frame = extract_frame_at_timestamp(video_path, timestamp_seconds)
+        
+        if frame:
+            frames.append({
+                'moment': moment,
+                'image': frame,
+                'timestamp': moment['timestamp']
+            })
+        
+        progress_bar.progress((i + 1) / len(key_moments))
+    
+    status_text.empty()
+    progress_bar.empty()
+    
+    return frames
+
+def image_to_base64(image):
+    """Convert PIL Image to base64 string"""
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return f"data:image/png;base64,{img_str}"
+
+def generate_documentation(transcript, frames):
+    """Generate final documentation with Gemini"""
+    try:
+        with st.spinner("🤖 Generating professional documentation... This may take 1-2 minutes..."):
+            # Prepare content for Gemini
+            content_parts = []
+            
+            # Instructions
+            instructions = """
+You are an expert technical writer specializing in accounting and finance process documentation.
+
+I will provide you with:
+1. A transcript of someone explaining a process
+2. Screenshots at key moments in the process
+
+Please create professional, audit-ready Standard Operating Procedure (SOP) documentation that includes:
+
+**Document Structure:**
+1. **Process Title** - Clear, descriptive title
+2. **Purpose** - Why this process exists and what it accomplishes
+3. **Scope** - What this process covers
+4. **Prerequisites** - What needs to be in place before starting (access, permissions, data, etc.)
+5. **Step-by-Step Instructions** - Numbered steps with:
+   - Clear action-oriented language (Click, Enter, Select, Navigate, etc.)
+   - Navigation paths when relevant (Menu > Options > Add Account)
+   - What data to enter
+   - What to verify or check
+   - Expected results
+6. **Control Points** - Key moments where accuracy is critical (for SOX compliance)
+7. **Common Issues & Troubleshooting** - Potential problems and solutions
+8. **Frequency** - How often this process is performed
+
+**Writing Guidelines:**
+- Use imperative mood (command form): "Click the Submit button" not "You click the Submit button"
+- Be concise but complete
+- Include relevant screenshot references: [See Screenshot 1]
+- Highlight control points with ⚠️ symbol
+- Use proper accounting terminology
+- Make it audit-ready with clear accountability and verification steps
+
+**Format:**
+- Use markdown formatting
+- Clear headers and subheaders
+- Numbered lists for sequential steps
+- Bullet points for options or notes
+
+Create documentation that would satisfy internal audit requirements and be immediately usable by a new team member.
+"""
+            
+            content_parts.append(instructions)
+            
+            # Add transcript
+            content_parts.append(f"\n\n**TRANSCRIPT:**\n{transcript}\n\n")
+            
+            # Add screenshots with context
+            content_parts.append("**SCREENSHOTS:**\n\n")
+            
+            for i, frame_data in enumerate(frames, 1):
+                moment = frame_data['moment']
+                
+                screenshot_context = f"""
+Screenshot {i} [{moment['timestamp']}]:
+- Type: {moment['type']}
+- Description: {moment['description']}
+"""
+                if moment.get('navigation_path'):
+                    screenshot_context += f"- Navigation: {moment['navigation_path']}\n"
+                
+                content_parts.append(screenshot_context)
+                content_parts.append(frame_data['image'])
+                content_parts.append("\n---\n")
+            
+            # Generate documentation
+            response = model.generate_content(content_parts)
+            
+            return response.text
+            
+    except Exception as e:
+        st.error(f"Error generating documentation: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
+        return None
+
+def show_moment_editor(key_moments):
+    """Show interactive editor for key moments"""
+    st.markdown("### 📝 Edit Key Moments")
+    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or delete unwanted ones.")
+    
+    edited_moments = []
+    
+    # Display each moment with edit controls
+    for i, moment in enumerate(key_moments):
+        with st.container():
+            col1, col2, col3, col4 = st.columns([1, 2, 4, 1])
+            
+            with col1:
+                # Editable timestamp
+                new_timestamp = st.text_input(
+                    "Time",
+                    value=moment['timestamp'],
+                    key=f"time_{i}",
+                    label_visibility="collapsed"
+                )
+            
+            with col2:
+                # Type selector
+                type_options = ['navigation', 'action', 'data_entry', 'decision', 'submission']
+                current_type = moment.get('type', 'action')
+                if current_type not in type_options:
+                    current_type = 'action'
+                
+                new_type = st.selectbox(
+                    "Type",
+                    options=type_options,
+                    index=type_options.index(current_type),
+                    key=f"type_{i}",
+                    label_visibility="collapsed"
+                )
+            
+            with col3:
+                # Editable description
+                new_description = st.text_area(
+                    "Description",
+                    value=moment['description'],
+                    height=60,
+                    key=f"desc_{i}",
+                    label_visibility="collapsed"
+                )
+                
+                # Navigation path (only for navigation type)
+                if new_type == 'navigation':
+                    new_nav_path = st.text_input(
+                        "Navigation Path",
+                        value=moment.get('navigation_path', ''),
+                        key=f"nav_{i}",
+                        placeholder="Menu > Options > Add Account"
+                    )
+                else:
+                    new_nav_path = None
+            
+            with col4:
+                # Delete button
+                delete = st.button("❌", key=f"delete_{i}", help="Delete this moment")
+            
+            # Only add if not deleted
+            if not delete:
+                edited_moment = {
+                    'timestamp': new_timestamp,
+                    'type': new_type,
+                    'description': new_description,
+                    'navigation_path': new_nav_path
+                }
+                edited_moments.append(edited_moment)
+            
+            st.markdown("---")
+    
+    # Add new moment section
+    with st.expander("➕ Add New Moment"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_timestamp = st.text_input("Timestamp (MM:SS)", key="new_time", placeholder="2:30")
+            new_type = st.selectbox("Type", options=['navigation', 'action', 'data_entry', 'decision', 'submission'], key="new_type")
+        
+        with col2:
+            new_description = st.text_area("Description", key="new_desc", height=100)
+            if new_type == 'navigation':
+                new_nav_path = st.text_input("Navigation Path", key="new_nav", placeholder="Menu > Options > Add Account")
+            else:
+                new_nav_path = None
+        
+        if st.button("➕ Add This Moment"):
+            if new_timestamp and new_description:
+                edited_moments.append({
+                    'timestamp': new_timestamp,
+                    'type': new_type,
+                    'description': new_description,
+                    'navigation_path': new_nav_path
+                })
+                st.success("Moment added! Click 'Apply Changes' below to update.")
+            else:
+                st.error("Please enter both timestamp and description")
+    
+    return edited_moments
 
 def main():
     initialize_session_state()
@@ -295,44 +524,21 @@ def main():
         st.markdown("""
         ### Quick Start Guide
         
-        1. **Record your process** using any screen recording tool:
-           - Zoom
-           - Loom
-           - QuickTime (Mac)
-           - OBS
-           - Windows Game Bar
-        
-        2. **Talk through the process** as you demonstrate:
-           - Explain navigation paths: "Now I'm going to Menu, then Options, then Add Account"
-           - Describe what you're clicking
-           - Mention what data you're entering
-           - Note any important decisions or confirmations
-        
+        1. **Record your process** using any screen recording tool (Zoom, Loom, QuickTime, OBS)
+        2. **Talk through the process** as you demonstrate - explain navigation, actions, and decisions
         3. **Upload your video** (MP4, MOV, AVI, WebM)
-        
-        4. **AI analyzes everything**:
-           - Transcribes your narration
-           - Identifies key moments for screenshots
-           - Captures navigation paths
-        
-        5. **Review and refine** the identified moments
-        
-        6. **Generate documentation** (Coming in Phase 2!)
+        4. **AI analyzes** and identifies key moments
+        5. **Review and edit** the identified moments (add, remove, or modify)
+        6. **Extract frames** to see all screenshots
+        7. **Generate documentation** - AI creates professional SOP
+        8. **Download** your documentation
         
         ### Tips for Best Results
         
-        - Speak clearly and at a moderate pace
-        - Explicitly mention navigation: "Click on Reports", "Go to Settings menu"
-        - Describe what you see: "Now I'm on the Transaction Entry screen"
-        - Keep recordings under 10 minutes for faster processing
-        
-        ### What This Tool Captures
-        
-        ✅ Navigation paths (Menu > Options > Add Account)  
-        ✅ Button clicks and actions  
-        ✅ Data entry points  
-        ✅ Decision points  
-        ✅ Screen transitions  
+        - Speak clearly and describe what you're doing
+        - Mention navigation paths explicitly
+        - Keep recordings under 10 minutes
+        - Explain the "why" not just the "what"
         """)
     
     # Main interface
@@ -350,11 +556,10 @@ def main():
         
         # Save uploaded file temporarily with proper flushing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-            # Read in chunks for larger files
             bytes_data = uploaded_file.getvalue()
             tmp_file.write(bytes_data)
-            tmp_file.flush()  # Ensure all data is written
-            os.fsync(tmp_file.fileno())  # Force write to disk
+            tmp_file.flush()
+            os.fsync(tmp_file.fileno())
             video_path = tmp_file.name
             st.session_state.video_path = video_path
         
@@ -394,8 +599,9 @@ def main():
                         if key_moments:
                             st.session_state.key_moments = key_moments
                             st.success(f"✅ Analysis complete! Found {len(key_moments)} key moments")
+                            st.rerun()
     
-    # Display results
+    # Display transcript
     if st.session_state.transcript:
         st.markdown("---")
         st.markdown("### Step 2: Review Transcript")
@@ -408,47 +614,34 @@ def main():
                 disabled=True
             )
     
-    if st.session_state.key_moments:
+    # Edit key moments
+    if st.session_state.key_moments and not st.session_state.extracted_frames:
         st.markdown("---")
-        st.markdown("### Step 3: Key Moments Identified by AI")
+        st.markdown("### Step 3: Review & Edit Key Moments")
         
-        st.info(f"🎯 AI identified **{len(st.session_state.key_moments)}** moments where screenshots should be captured")
+        st.info(f"🎯 AI identified **{len(st.session_state.key_moments)}** moments")
         
-        # Display key moments
-        for i, moment in enumerate(st.session_state.key_moments, 1):
-            with st.container():
-                col1, col2, col3 = st.columns([1, 2, 3])
-                
-                with col1:
-                    st.markdown(f"**⏱️ {moment['timestamp']}**")
-                
-                with col2:
-                    # Color code by type
-                    type_colors = {
-                        'navigation': '🧭',
-                        'action': '👆',
-                        'data_entry': '⌨️',
-                        'decision': '🤔',
-                        'submission': '✅'
-                    }
-                    icon = type_colors.get(moment['type'], '📍')
-                    st.markdown(f"{icon} **{moment['type'].replace('_', ' ').title()}**")
-                
-                with col3:
-                    st.markdown(moment['description'])
-                    if moment.get('navigation_path'):
-                        st.markdown(f"📍 Path: `{moment['navigation_path']}`")
-                
-                st.markdown("---")
+        # Show editor
+        edited_moments = show_moment_editor(st.session_state.key_moments)
         
-        # Export key moments
-        st.markdown("### Export Key Moments")
-        
-        col1, col2 = st.columns(2)
+        # Apply changes button
+        col1, col2, col3 = st.columns([2, 2, 2])
         
         with col1:
-            # Download as JSON
-            json_data = json.dumps(st.session_state.key_moments, indent=2)
+            if st.button("✅ Apply Changes & Extract Frames", type="primary", use_container_width=True):
+                st.session_state.key_moments = edited_moments
+                
+                # Extract frames
+                with st.spinner("📸 Extracting screenshots from video..."):
+                    frames = extract_all_frames(st.session_state.video_path, edited_moments)
+                    st.session_state.extracted_frames = frames
+                
+                st.success(f"✅ Extracted {len(frames)} screenshots!")
+                st.rerun()
+        
+        with col2:
+            # Download edited moments as JSON
+            json_data = json.dumps(edited_moments, indent=2)
             st.download_button(
                 label="📥 Download as JSON",
                 data=json_data,
@@ -456,46 +649,99 @@ def main():
                 mime="application/json",
                 use_container_width=True
             )
+    
+    # Show extracted frames
+    if st.session_state.extracted_frames:
+        st.markdown("---")
+        st.markdown("### Step 4: Review Extracted Screenshots")
+        
+        st.success(f"✅ {len(st.session_state.extracted_frames)} screenshots ready")
+        
+        # Display frames in grid
+        cols_per_row = 3
+        for i in range(0, len(st.session_state.extracted_frames), cols_per_row):
+            cols = st.columns(cols_per_row)
+            for j in range(cols_per_row):
+                if i + j < len(st.session_state.extracted_frames):
+                    frame_data = st.session_state.extracted_frames[i + j]
+                    with cols[j]:
+                        st.image(frame_data['image'], caption=f"{frame_data['timestamp']} - {frame_data['moment']['type']}", use_container_width=True)
+                        st.caption(frame_data['moment']['description'][:100] + "...")
+        
+        # Generate documentation button
+        st.markdown("---")
+        
+        if not st.session_state.final_documentation:
+            if st.button("🤖 Generate Professional Documentation", type="primary", use_container_width=True):
+                doc = generate_documentation(
+                    st.session_state.transcript,
+                    st.session_state.extracted_frames
+                )
+                
+                if doc:
+                    st.session_state.final_documentation = doc
+                    st.success("✅ Documentation generated!")
+                    st.rerun()
+        else:
+            st.success("✅ Documentation ready!")
+    
+    # Show final documentation
+    if st.session_state.final_documentation:
+        st.markdown("---")
+        st.markdown("### Step 5: Your Professional Documentation")
+        
+        # Display documentation
+        with st.expander("📄 View Full Documentation", expanded=True):
+            st.markdown(st.session_state.final_documentation)
+        
+        # Download options
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                label="📥 Download as Markdown",
+                data=st.session_state.final_documentation,
+                file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown",
+                use_container_width=True
+            )
         
         with col2:
-            # Show next steps
-            st.info("**Phase 2 Coming Soon:**\n- Extract video frames at these timestamps\n- Generate documentation with screenshots")
+            # Add note about Word conversion
+            st.info("💡 Tip: Open the Markdown file in Word or use an online converter to create a .docx file")
     
-    # Sidebar info
+    # Sidebar
     with st.sidebar:
-        st.markdown("### 📊 Current Status")
+        st.markdown("### 📊 Progress")
         
         status_items = [
             ("Video Uploaded", st.session_state.video_path is not None),
             ("Audio Extracted", st.session_state.audio_path is not None),
             ("Transcript Generated", st.session_state.transcript is not None),
-            ("Key Moments Identified", st.session_state.key_moments is not None)
+            ("Key Moments Identified", st.session_state.key_moments is not None),
+            ("Frames Extracted", st.session_state.extracted_frames is not None),
+            ("Documentation Generated", st.session_state.final_documentation is not None)
         ]
         
         for label, completed in status_items:
             icon = "✅" if completed else "⏳"
             st.markdown(f"{icon} {label}")
         
-        if st.session_state.key_moments:
-            st.markdown("---")
-            st.markdown(f"**{len(st.session_state.key_moments)}** screenshots to capture")
-        
         st.markdown("---")
         
-        if st.button("🔄 Start Over", use_container_width=True):
-            # Clear session state
+        if st.button("🔄 Start New Process", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
         
         st.markdown("---")
         st.markdown("""
-        ### 💡 Pro Tips
+        ### 💡 Tips
         
+        - Edit moments before extracting
+        - Review screenshots carefully
+        - Download immediately
         - Keep videos under 10 min
-        - Speak clearly
-        - Mention navigation paths
-        - Describe key actions
         """)
 
 if __name__ == "__main__":
