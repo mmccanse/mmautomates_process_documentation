@@ -14,6 +14,7 @@ import base64
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import pickle
 
 # Load environment variables
 load_dotenv()
@@ -84,6 +85,10 @@ def initialize_session_state():
         st.session_state.final_documentation = None
     if 'editing_mode' not in st.session_state:
         st.session_state.editing_mode = False
+    if 'google_creds' not in st.session_state:
+        st.session_state.google_creds = None
+    if 'moments_to_delete' not in st.session_state:
+        st.session_state.moments_to_delete = set()
 
 def extract_audio_from_video(video_path):
     """Extract audio from video file"""
@@ -404,6 +409,8 @@ Screenshot {i} [{moment['timestamp']}]:
 
 def create_word_document(markdown_text, frames):
     """Create a Word document with embedded screenshots"""
+    import re
+    
     try:
         doc = Document()
         
@@ -443,7 +450,6 @@ def create_word_document(markdown_text, frames):
             # Handle screenshot references
             elif '[Screenshot' in line:
                 # Extract screenshot number
-                import re
                 matches = re.findall(r'\[Screenshot (\d+)\]', line)
                 
                 # Add the text before/after screenshot
@@ -516,15 +522,240 @@ def create_word_document(markdown_text, frames):
         st.error(f"Details: {traceback.format_exc()}")
         return None
 
+def create_google_doc(markdown_text, frames, creds):
+    """Create a Google Doc with embedded images"""
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseUpload
+        
+        # Build the service
+        docs_service = build('docs', 'v1', credentials=creds)
+        drive_service = build('drive', 'v3', credentials=creds)
+        
+        # Create a new document
+        doc_title = f"Process Documentation {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        document = docs_service.documents().create(body={'title': doc_title}).execute()
+        doc_id = document.get('documentId')
+        
+        st.info(f"Created document: {doc_title}")
+        
+        # Parse markdown and build requests
+        requests = []
+        lines = markdown_text.split('\n')
+        current_index = 1
+        
+        import re
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Handle headers
+            if line.startswith('# '):
+                title = line[2:].strip()
+                requests.append({
+                    'insertText': {
+                        'location': {'index': current_index},
+                        'text': title + '\n'
+                    }
+                })
+                # Style as title
+                requests.append({
+                    'updateParagraphStyle': {
+                        'range': {
+                            'startIndex': current_index,
+                            'endIndex': current_index + len(title)
+                        },
+                        'paragraphStyle': {
+                            'namedStyleType': 'TITLE'
+                        },
+                        'fields': 'namedStyleType'
+                    }
+                })
+                current_index += len(title) + 1
+                
+            elif line.startswith('## '):
+                heading = line[3:].strip()
+                requests.append({
+                    'insertText': {
+                        'location': {'index': current_index},
+                        'text': heading + '\n'
+                    }
+                })
+                requests.append({
+                    'updateParagraphStyle': {
+                        'range': {
+                            'startIndex': current_index,
+                            'endIndex': current_index + len(heading)
+                        },
+                        'paragraphStyle': {
+                            'namedStyleType': 'HEADING_1'
+                        },
+                        'fields': 'namedStyleType'
+                    }
+                })
+                current_index += len(heading) + 1
+            
+            elif '[Screenshot' in line:
+                # Handle text before screenshot
+                text_parts = re.split(r'\[Screenshot \d+\]', line)
+                matches = re.findall(r'\[Screenshot (\d+)\]', line)
+                
+                for j, text in enumerate(text_parts):
+                    if text.strip():
+                        requests.append({
+                            'insertText': {
+                                'location': {'index': current_index},
+                                'text': text.strip() + '\n'
+                            }
+                        })
+                        current_index += len(text.strip()) + 1
+                    
+                    if j < len(matches):
+                        screenshot_num = int(matches[j])
+                        if screenshot_num <= len(frames):
+                            frame_data = frames[screenshot_num - 1]
+                            
+                            # Upload image to Drive first
+                            img_buffer = io.BytesIO()
+                            frame_data['image'].save(img_buffer, format='PNG')
+                            img_buffer.seek(0)
+                            
+                            media = MediaIoBaseUpload(img_buffer, mimetype='image/png')
+                            image_file = drive_service.files().create(
+                                body={'name': f'screenshot_{screenshot_num}.png'},
+                                media_body=media,
+                                fields='id,webContentLink'
+                            ).execute()
+                            
+                            # Get image URL
+                            image_id = image_file.get('id')
+                            
+                            # Insert image into document
+                            requests.append({
+                                'insertInlineImage': {
+                                    'location': {'index': current_index},
+                                    'uri': f'https://drive.google.com/uc?id={image_id}',
+                                    'objectSize': {
+                                        'height': {'magnitude': 400, 'unit': 'PT'},
+                                        'width': {'magnitude': 500, 'unit': 'PT'}
+                                    }
+                                }
+                            })
+                            current_index += 1
+                            
+                            # Add caption
+                            caption_text = f"\nScreenshot {screenshot_num}: {frame_data['moment']['description']}\n\n"
+                            requests.append({
+                                'insertText': {
+                                    'location': {'index': current_index},
+                                    'text': caption_text
+                                }
+                            })
+                            current_index += len(caption_text)
+            
+            else:
+                # Regular text
+                requests.append({
+                    'insertText': {
+                        'location': {'index': current_index},
+                        'text': line + '\n'
+                    }
+                })
+                current_index += len(line) + 1
+        
+        # Execute all requests
+        if requests:
+            docs_service.documents().batchUpdate(
+                documentId=doc_id,
+                body={'requests': requests}
+            ).execute()
+        
+        # Return document URL
+        doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+        return doc_url, doc_id
+        
+    except Exception as e:
+        st.error(f"Error creating Google Doc: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
+        return None, None
+
+def authenticate_google():
+    """Authenticate with Google using OAuth"""
+    try:
+        from google_auth_oauthlib.flow import Flow
+        from google.auth.transport.requests import Request
+        import pickle
+        
+        SCOPES = ['https://www.googleapis.com/auth/documents', 
+                  'https://www.googleapis.com/auth/drive.file']
+        
+        creds = None
+        
+        # Check if we have saved credentials
+        if os.path.exists('token.pickle'):
+            with open('token.pickle', 'rb') as token:
+                creds = pickle.load(token)
+        
+        # If no valid credentials, let user log in
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                if not os.path.exists('credentials.json'):
+                    st.error("""
+                    ⚠️ Google credentials not found!
+                    
+                    To enable Google Drive integration:
+                    1. Go to Google Cloud Console
+                    2. Create a project and enable Google Docs & Drive APIs
+                    3. Download credentials.json
+                    4. Place it in the app directory
+                    
+                    For now, please use the Word document download option.
+                    """)
+                    return None
+                
+                flow = Flow.from_client_secrets_file(
+                    'credentials.json',
+                    scopes=SCOPES,
+                    redirect_uri='urn:ietf:wg:oauth:2.0:oob'
+                )
+                
+                auth_url, _ = flow.authorization_url(prompt='consent')
+                
+                st.info(f"Please visit this URL to authorize: {auth_url}")
+                code = st.text_input("Enter the authorization code:")
+                
+                if code:
+                    flow.fetch_token(code=code)
+                    creds = flow.credentials
+                    
+                    # Save credentials
+                    with open('token.pickle', 'wb') as token:
+                        pickle.dump(creds, token)
+                else:
+                    return None
+            
+        return creds
+        
+    except Exception as e:
+        st.error(f"Authentication error: {str(e)}")
+        return None
+
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
     st.markdown("### 📝 Edit Key Moments")
     st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or delete unwanted ones.")
     
     edited_moments = []
+    deleted_indices = []
     
     # Display each moment with edit controls
     for i, moment in enumerate(key_moments):
+        # Check if this moment should be shown
         with st.container():
             col1, col2, col3, col4 = st.columns([1, 2, 4, 1])
             
@@ -575,10 +806,11 @@ def show_moment_editor(key_moments):
             
             with col4:
                 # Delete button
-                delete = st.button("❌", key=f"delete_{i}", help="Delete this moment")
+                if st.button("❌", key=f"delete_{i}", help="Delete this moment"):
+                    deleted_indices.append(i)
             
-            # Only add if not deleted
-            if not delete:
+            # Add to edited list if not marked for deletion
+            if i not in deleted_indices:
                 edited_moment = {
                     'timestamp': new_timestamp,
                     'type': new_type,
@@ -613,6 +845,9 @@ def show_moment_editor(key_moments):
                     'navigation_path': new_nav_path
                 })
                 st.success("Moment added! Click 'Apply Changes' below to update.")
+                # Clear the inputs by rerunning
+                time.sleep(1)
+                st.rerun()
             else:
                 st.error("Please enter both timestamp and description")
     
@@ -750,7 +985,11 @@ def main():
         
         with col1:
             if st.button("✅ Apply Changes & Extract Frames", type="primary", use_container_width=True):
+                # Update moments
                 st.session_state.key_moments = edited_moments
+                
+                # Clear existing frames to force re-extraction
+                st.session_state.extracted_frames = None
                 
                 # Extract frames
                 with st.spinner("📸 Extracting screenshots from video..."):
@@ -815,46 +1054,109 @@ def main():
         with st.expander("📄 View Full Documentation", expanded=True):
             st.markdown(st.session_state.final_documentation)
         
-        # Generate Word document
-        with st.spinner("📝 Creating Word document with embedded screenshots..."):
-            word_doc = create_word_document(
-                st.session_state.final_documentation,
-                st.session_state.extracted_frames
-            )
+        st.markdown("---")
+        st.markdown("### 📥 Download Options")
         
-        if word_doc:
-            # Download options
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.download_button(
-                    label="📥 Download as Word Document (.docx)",
-                    data=word_doc,
-                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                    type="primary"
+        # Choose download method
+        download_method = st.radio(
+            "How would you like to save your documentation?",
+            options=["Download as Word Document", "Save to Google Drive"],
+            horizontal=True
+        )
+        
+        if download_method == "Download as Word Document":
+            # Generate Word document
+            with st.spinner("📝 Creating Word document with embedded screenshots..."):
+                word_doc = create_word_document(
+                    st.session_state.final_documentation,
+                    st.session_state.extracted_frames
                 )
             
-            with col2:
-                st.download_button(
-                    label="📥 Download as Markdown",
-                    data=st.session_state.final_documentation,
-                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                    mime="text/markdown",
-                    use_container_width=True
-                )
+            if word_doc:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.download_button(
+                        label="📥 Download Word Document (.docx)",
+                        data=word_doc,
+                        file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True,
+                        type="primary"
+                    )
+                
+                with col2:
+                    st.download_button(
+                        label="📥 Download as Markdown (Backup)",
+                        data=st.session_state.final_documentation,
+                        file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                        mime="text/markdown",
+                        use_container_width=True
+                    )
+                
+                st.success("✅ Word document ready with all screenshots embedded!")
+            else:
+                st.error("Failed to create Word document. Please try the markdown option.")
+        
+        else:  # Save to Google Drive
+            st.info("🔐 **Google Drive Integration**")
             
-            st.success("✅ Word document ready with all screenshots embedded!")
-        else:
-            # Fallback to markdown only
-            st.download_button(
-                label="📥 Download as Markdown",
-                data=st.session_state.final_documentation,
-                file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown",
-                use_container_width=True
-            )
+            if not st.session_state.google_creds:
+                st.warning("""
+                To save to Google Drive, you need to:
+                1. Set up Google Cloud credentials (one-time setup)
+                2. Authenticate with your Google account
+                
+                **Setup Instructions:**
+                - Go to [Google Cloud Console](https://console.cloud.google.com/)
+                - Create a project
+                - Enable Google Docs & Drive APIs
+                - Create OAuth 2.0 credentials
+                - Download as `credentials.json` and place in app directory
+                
+                Once set up, click "Authenticate with Google" below.
+                """)
+                
+                if st.button("🔐 Authenticate with Google", type="primary"):
+                    creds = authenticate_google()
+                    if creds:
+                        st.session_state.google_creds = creds
+                        st.success("✅ Authentication successful!")
+                        st.rerun()
+            else:
+                st.success("✅ Already authenticated with Google")
+                
+                if st.button("📤 Create Google Doc", type="primary", use_container_width=True):
+                    with st.spinner("Creating Google Doc with embedded screenshots..."):
+                        doc_url, doc_id = create_google_doc(
+                            st.session_state.final_documentation,
+                            st.session_state.extracted_frames,
+                            st.session_state.google_creds
+                        )
+                    
+                    if doc_url:
+                        st.success("✅ Google Doc created successfully!")
+                        st.markdown(f"**[Open your document]({doc_url})**")
+                        st.info("💡 Tip: The document is saved in your Google Drive and can be shared with your team.")
+                    else:
+                        st.error("Failed to create Google Doc. Please try downloading the Word document instead.")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🔄 Re-authenticate", use_container_width=True):
+                        st.session_state.google_creds = None
+                        if os.path.exists('token.pickle'):
+                            os.remove('token.pickle')
+                        st.rerun()
+                
+                with col2:
+                    st.download_button(
+                        label="📥 Download Markdown (Backup)",
+                        data=st.session_state.final_documentation,
+                        file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                        mime="text/markdown",
+                        use_container_width=True
+                    )
     
     # Sidebar
     with st.sidebar:
