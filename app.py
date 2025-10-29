@@ -799,28 +799,46 @@ def authenticate_google():
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
     st.markdown("### 📝 Edit Key Moments")
-    st.info("Review and edit the AI-identified moments. You can modify timestamps, descriptions, add new moments, or delete unwanted ones.")
+    st.info("Review and edit the AI-identified moments. Select moments to delete, or add new ones.")
     
+    # Multi-select for deletion
+    st.markdown("#### 🗑️ Delete Unwanted Moments")
+    moment_options = [
+        f"{i+1}. [{m['timestamp']}] {m['type']}: {m['description'][:50]}..." 
+        for i, m in enumerate(key_moments)
+    ]
+    
+    moments_to_delete = st.multiselect(
+        "Select moments to DELETE (they will be removed when you apply changes):",
+        options=range(len(key_moments)),
+        format_func=lambda x: moment_options[x],
+        key="delete_moments"
+    )
+    
+    if moments_to_delete:
+        st.warning(f"⚠️ {len(moments_to_delete)} moment(s) will be deleted when you click 'Apply Changes'")
+    
+    st.markdown("---")
+    st.markdown("#### ✏️ Edit Existing Moments")
+    
+    # Show editable fields for moments NOT marked for deletion
     edited_moments = []
-    deleted_indices = []
     
-    # Display each moment with edit controls
     for i, moment in enumerate(key_moments):
-        # Check if this moment should be shown
-        with st.container():
-            col1, col2, col3, col4 = st.columns([1, 2, 4, 1])
+        # Skip moments marked for deletion
+        if i in moments_to_delete:
+            continue
+            
+        with st.expander(f"✏️ Edit Moment {i+1}: [{moment['timestamp']}] {moment['type']}", expanded=False):
+            col1, col2 = st.columns(2)
             
             with col1:
-                # Editable timestamp
                 new_timestamp = st.text_input(
-                    "Time",
+                    "Timestamp (MM:SS)",
                     value=moment['timestamp'],
-                    key=f"time_{i}",
-                    label_visibility="collapsed"
+                    key=f"edit_time_{i}"
                 )
-            
-            with col2:
-                # Type selector
+                
                 type_options = ['navigation', 'action', 'data_entry', 'decision', 'submission']
                 current_type = moment.get('type', 'action')
                 if current_type not in type_options:
@@ -830,47 +848,103 @@ def show_moment_editor(key_moments):
                     "Type",
                     options=type_options,
                     index=type_options.index(current_type),
-                    key=f"type_{i}",
-                    label_visibility="collapsed"
+                    key=f"edit_type_{i}"
                 )
             
-            with col3:
-                # Editable description
+            with col2:
                 new_description = st.text_area(
                     "Description",
                     value=moment['description'],
-                    height=60,
-                    key=f"desc_{i}",
-                    label_visibility="collapsed"
+                    height=100,
+                    key=f"edit_desc_{i}"
                 )
                 
-                # Navigation path (only for navigation type)
                 if new_type == 'navigation':
                     new_nav_path = st.text_input(
                         "Navigation Path",
                         value=moment.get('navigation_path', ''),
-                        key=f"nav_{i}",
+                        key=f"edit_nav_{i}",
                         placeholder="Menu > Options > Add Account"
                     )
                 else:
                     new_nav_path = None
             
-            with col4:
-                # Delete button
-                if st.button("❌", key=f"delete_{i}", help="Delete this moment"):
-                    deleted_indices.append(i)
+            # Add edited moment to list
+            edited_moments.append({
+                'timestamp': new_timestamp,
+                'type': new_type,
+                'description': new_description,
+                'navigation_path': new_nav_path
+            })
+    
+    st.markdown("---")
+    
+    # Add new moment section
+    with st.expander("➕ Add New Moment"):
+        st.markdown("Add a new screenshot moment that AI may have missed:")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_timestamp = st.text_input(
+                "Timestamp (MM:SS)",
+                key="new_time",
+                placeholder="2:30",
+                help="Format: MM:SS (e.g., 2:30 for 2 minutes 30 seconds)"
+            )
+            new_type = st.selectbox(
+                "Type",
+                options=['navigation', 'action', 'data_entry', 'decision', 'submission'],
+                key="new_type"
+            )
+        
+        with col2:
+            new_description = st.text_area(
+                "Description",
+                key="new_desc",
+                height=100,
+                placeholder="Describe what's happening at this moment..."
+            )
             
-            # Add to edited list if not marked for deletion
-            if i not in deleted_indices:
-                edited_moment = {
+            if new_type == 'navigation':
+                new_nav_path = st.text_input(
+                    "Navigation Path",
+                    key="new_nav",
+                    placeholder="Menu > Options > Add Account"
+                )
+            else:
+                new_nav_path = None
+        
+        if st.button("➕ Add This Moment", use_container_width=True):
+            if new_timestamp and new_description:
+                # Add to the end of edited moments
+                edited_moments.append({
                     'timestamp': new_timestamp,
                     'type': new_type,
                     'description': new_description,
                     'navigation_path': new_nav_path
-                }
-                edited_moments.append(edited_moment)
-            
-            st.markdown("---")
+                })
+                st.success("✅ Moment added! Click 'Apply Changes & Extract Frames' below to save.")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ Please enter both timestamp and description")
+    
+    # Summary
+    st.markdown("---")
+    original_count = len(key_moments)
+    deleted_count = len(moments_to_delete)
+    final_count = len(edited_moments)
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Original Moments", original_count)
+    with col2:
+        st.metric("Will Delete", deleted_count, delta=f"-{deleted_count}" if deleted_count > 0 else None)
+    with col3:
+        st.metric("Final Count", final_count, delta=final_count - original_count)
+    
+    return edited_moments
     
     # Add new moment section
     with st.expander("➕ Add New Moment"):
