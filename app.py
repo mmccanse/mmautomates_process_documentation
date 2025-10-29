@@ -11,6 +11,9 @@ import cv2
 from PIL import Image
 import io
 import base64
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Load environment variables
 load_dotenv()
@@ -330,7 +333,7 @@ I will provide you with:
 Please create professional, audit-ready Standard Operating Procedure (SOP) documentation that includes:
 
 **Document Structure:**
-1. **Process Title** - Clear, descriptive title
+1. **Process Title** - Clear, descriptive title (just the title, no "Process Title:" label)
 2. **Purpose** - Why this process exists and what it accomplishes
 3. **Scope** - What this process covers
 4. **Prerequisites** - What needs to be in place before starting (access, permissions, data, etc.)
@@ -340,6 +343,7 @@ Please create professional, audit-ready Standard Operating Procedure (SOP) docum
    - What data to enter
    - What to verify or check
    - Expected results
+   - Mark where screenshots should be referenced with: [Screenshot X]
 6. **Control Points** - Key moments where accuracy is critical (for SOX compliance)
 7. **Common Issues & Troubleshooting** - Potential problems and solutions
 8. **Frequency** - How often this process is performed
@@ -347,14 +351,17 @@ Please create professional, audit-ready Standard Operating Procedure (SOP) docum
 **Writing Guidelines:**
 - Use imperative mood (command form): "Click the Submit button" not "You click the Submit button"
 - Be concise but complete
-- Include relevant screenshot references: [See Screenshot 1]
+- Include screenshot references like [Screenshot 1], [Screenshot 2] exactly where they should appear
 - Highlight control points with ⚠️ symbol
 - Use proper accounting terminology
 - Make it audit-ready with clear accountability and verification steps
 
+**CRITICAL: Screenshot References**
+For each screenshot provided, you MUST include [Screenshot X] in the appropriate step where that screenshot should be displayed. Match the screenshot number to the step it illustrates.
+
 **Format:**
 - Use markdown formatting
-- Clear headers and subheaders
+- Clear headers (use ## for main sections, ### for subsections)
 - Numbered lists for sequential steps
 - Bullet points for options or notes
 
@@ -391,6 +398,120 @@ Screenshot {i} [{moment['timestamp']}]:
             
     except Exception as e:
         st.error(f"Error generating documentation: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
+        return None
+
+def create_word_document(markdown_text, frames):
+    """Create a Word document with embedded screenshots"""
+    try:
+        doc = Document()
+        
+        # Set default font
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Calibri'
+        font.size = Pt(11)
+        
+        # Parse markdown and build document
+        lines = markdown_text.split('\n')
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Skip empty lines
+            if not line:
+                i += 1
+                continue
+            
+            # Handle headers
+            if line.startswith('# '):
+                # Main title (H1)
+                title = line[2:].strip()
+                p = doc.add_heading(title, level=0)
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                
+            elif line.startswith('## '):
+                # Section header (H2)
+                doc.add_heading(line[3:].strip(), level=1)
+                
+            elif line.startswith('### '):
+                # Subsection header (H3)
+                doc.add_heading(line[4:].strip(), level=2)
+            
+            # Handle screenshot references
+            elif '[Screenshot' in line:
+                # Extract screenshot number
+                import re
+                matches = re.findall(r'\[Screenshot (\d+)\]', line)
+                
+                # Add the text before/after screenshot
+                text_parts = re.split(r'\[Screenshot \d+\]', line)
+                
+                for j, text in enumerate(text_parts):
+                    if text.strip():
+                        doc.add_paragraph(text.strip())
+                    
+                    # Add screenshot if there's a match
+                    if j < len(matches):
+                        screenshot_num = int(matches[j])
+                        if screenshot_num <= len(frames):
+                            frame_data = frames[screenshot_num - 1]
+                            
+                            # Save image to temporary file
+                            img_buffer = io.BytesIO()
+                            frame_data['image'].save(img_buffer, format='PNG')
+                            img_buffer.seek(0)
+                            
+                            # Add image to document
+                            doc.add_picture(img_buffer, width=Inches(6))
+                            
+                            # Add caption
+                            caption = doc.add_paragraph()
+                            caption.add_run(f"Screenshot {screenshot_num}: {frame_data['moment']['description']}").italic = True
+                            caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Handle numbered lists
+            elif re.match(r'^\d+\.', line):
+                doc.add_paragraph(line, style='List Number')
+            
+            # Handle bullet points
+            elif line.startswith('- ') or line.startswith('* '):
+                doc.add_paragraph(line[2:], style='List Bullet')
+            
+            # Handle bold text (simplified)
+            elif '**' in line:
+                p = doc.add_paragraph()
+                parts = line.split('**')
+                for idx, part in enumerate(parts):
+                    if idx % 2 == 0:
+                        p.add_run(part)
+                    else:
+                        p.add_run(part).bold = True
+            
+            # Regular paragraph
+            else:
+                doc.add_paragraph(line)
+            
+            i += 1
+        
+        # Add footer with generation date
+        section = doc.sections[0]
+        footer = section.footer
+        footer_para = footer.paragraphs[0]
+        footer_para.text = f"Generated by AI Process Documentation Generator on {datetime.now().strftime('%B %d, %Y')}"
+        footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Save to bytes
+        doc_buffer = io.BytesIO()
+        doc.save(doc_buffer)
+        doc_buffer.seek(0)
+        
+        return doc_buffer.getvalue()
+        
+    except Exception as e:
+        st.error(f"Error creating Word document: {str(e)}")
         import traceback
         st.error(f"Details: {traceback.format_exc()}")
         return None
@@ -694,10 +815,39 @@ def main():
         with st.expander("📄 View Full Documentation", expanded=True):
             st.markdown(st.session_state.final_documentation)
         
-        # Download options
-        col1, col2 = st.columns(2)
+        # Generate Word document
+        with st.spinner("📝 Creating Word document with embedded screenshots..."):
+            word_doc = create_word_document(
+                st.session_state.final_documentation,
+                st.session_state.extracted_frames
+            )
         
-        with col1:
+        if word_doc:
+            # Download options
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.download_button(
+                    label="📥 Download as Word Document (.docx)",
+                    data=word_doc,
+                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    type="primary"
+                )
+            
+            with col2:
+                st.download_button(
+                    label="📥 Download as Markdown",
+                    data=st.session_state.final_documentation,
+                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+            
+            st.success("✅ Word document ready with all screenshots embedded!")
+        else:
+            # Fallback to markdown only
             st.download_button(
                 label="📥 Download as Markdown",
                 data=st.session_state.final_documentation,
@@ -705,10 +855,6 @@ def main():
                 mime="text/markdown",
                 use_container_width=True
             )
-        
-        with col2:
-            # Add note about Word conversion
-            st.info("💡 Tip: Open the Markdown file in Word or use an online converter to create a .docx file")
     
     # Sidebar
     with st.sidebar:
