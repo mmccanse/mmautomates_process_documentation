@@ -306,10 +306,10 @@ def main():
     )
     
     if uploaded_file is not None:
-    # Display file info
+        # Display file info
         st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
-    
-    # Save uploaded file temporarily with proper flushing
+        
+        # Save uploaded file temporarily with proper flushing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
             # Read in chunks for larger files
             bytes_data = uploaded_file.getvalue()
@@ -318,7 +318,7 @@ def main():
             os.fsync(tmp_file.fileno())  # Force write to disk
             video_path = tmp_file.name
             st.session_state.video_path = video_path
-    
+        
         # Verify file was saved correctly
         if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
             st.success(f"✅ Video uploaded successfully!")
@@ -326,34 +326,35 @@ def main():
             st.error("❌ Video upload failed. Please try again.")
             video_path = None
         
-        # Show video preview
-        st.video(video_path)
-        
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            process_button = st.button("🚀 Process Video", type="primary", use_container_width=True)
-        
-        if process_button:
-            # Extract audio
-            audio_path, duration = extract_audio_from_video(video_path)
+        # Show video preview (only if file exists)
+        if video_path:
+            st.video(video_path)
             
-            if audio_path:
-                st.session_state.audio_path = audio_path
-                st.success(f"✅ Audio extracted successfully! Video duration: {duration:.1f} seconds")
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                process_button = st.button("🚀 Process Video", type="primary", use_container_width=True)
+            
+            if process_button:
+                # Extract audio
+                audio_path, duration = extract_audio_from_video(video_path)
                 
-                # Transcribe audio
-                transcript = transcribe_audio_with_gemini(audio_path)
-                
-                if transcript:
-                    st.session_state.transcript = transcript
-                    st.success("✅ Transcription complete!")
+                if audio_path:
+                    st.session_state.audio_path = audio_path
+                    st.success(f"✅ Audio extracted successfully! Video duration: {duration:.1f} seconds")
                     
-                    # Analyze transcript
-                    key_moments = analyze_transcript_for_key_moments(transcript)
+                    # Transcribe audio
+                    transcript = transcribe_audio_with_gemini(audio_path)
                     
-                    if key_moments:
-                        st.session_state.key_moments = key_moments
-                        st.success(f"✅ Analysis complete! Found {len(key_moments)} key moments")
+                    if transcript:
+                        st.session_state.transcript = transcript
+                        st.success("✅ Transcription complete!")
+                        
+                        # Analyze transcript
+                        key_moments = analyze_transcript_for_key_moments(transcript)
+                        
+                        if key_moments:
+                            st.session_state.key_moments = key_moments
+                            st.success(f"✅ Analysis complete! Found {len(key_moments)} key moments")
     
     # Display results
     if st.session_state.transcript:
