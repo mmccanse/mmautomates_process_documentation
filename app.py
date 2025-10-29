@@ -14,7 +14,8 @@ load_dotenv()
 # Configure Gemini API
 if 'GEMINI_API_KEY' in os.environ:
     genai.configure(api_key=os.environ['GEMINI_API_KEY'])
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    # Use the correct model name for the current API version
+    model = genai.GenerativeModel('gemini-1.5-flash')
 else:
     model = None
 
