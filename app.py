@@ -998,6 +998,13 @@ def main():
     )
     
     if uploaded_file is not None:
+        # Clear previous session artifacts when a new video is provided
+        st.session_state.transcript = None
+        st.session_state.key_moments = None
+        st.session_state.extracted_frames = None
+        st.session_state.word_doc_bytes = None
+        st.session_state.viewing_image = None
+        st.session_state.audio_path = None
         # Display file info
         st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
         
@@ -1185,21 +1192,15 @@ def main():
         st.markdown("---")
         st.markdown("### Step 5: Download Your Professional Documentation")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Download Word document
-            st.download_button(
-                label="📥 Download Word Document (.docx)",
-                data=st.session_state.word_doc_bytes,
-                file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                type="primary"
-            )
-            st.caption("Professional SOP with embedded screenshots")
-        
-        with col2:
-            st.caption("Ready to share!")
+        # Download Word document (single column)
+        st.download_button(
+            label="📥 Download Word Document (.docx)",
+            data=st.session_state.word_doc_bytes,
+            file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            type="primary"
+        )
+        st.caption("Professional SOP with embedded screenshots")
         
         # Google Drive upload section
         st.markdown("---")
@@ -1264,12 +1265,7 @@ def main():
                     else:
                         st.error("Upload failed. Please try downloading instead.")
             
-            with col_upload2:
-                if st.button("🔄 Change Google Account"):
-                    st.session_state.google_creds = None
-                    if os.path.exists('token.pickle'):
-                        os.remove('token.pickle')
-                    st.rerun()
+            # Removed 'Change Google Account' to reduce confusion for demo
     
     # Sidebar
     with st.sidebar:
