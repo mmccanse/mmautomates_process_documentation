@@ -15,6 +15,7 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pickle
+import re
 
 # Load environment variables
 load_dotenv()
@@ -103,8 +104,6 @@ def initialize_session_state():
         st.session_state.audio_path = None
     if 'extracted_frames' not in st.session_state:
         st.session_state.extracted_frames = None
-    if 'final_documentation' not in st.session_state:
-        st.session_state.final_documentation = None
     if 'word_doc_bytes' not in st.session_state:
         st.session_state.word_doc_bytes = None
     if 'editing_mode' not in st.session_state:
@@ -347,13 +346,11 @@ def image_to_base64(image):
     return f"data:image/png;base64,{img_str}"
 
 def generate_documentation(transcript, frames):
-    """Generate final documentation with Gemini"""
+    """Generate final documentation with Gemini using delimiters"""
     try:
         with st.spinner("🤖 Generating professional documentation... This may take 1-2 minutes..."):
-            # Prepare content for Gemini
             content_parts = []
             
-            # Instructions
             instructions = """
 You are an expert technical writer specializing in accounting and finance process documentation.
 
@@ -361,69 +358,82 @@ I will provide you with:
 1. A transcript of someone explaining a process
 2. Screenshots at key moments in the process
 
-Please create professional, audit-ready Standard Operating Procedure (SOP) documentation that includes:
+Please create professional, audit-ready Standard Operating Procedure (SOP) documentation.
+
+**CRITICAL: Use ONLY these delimiters. Do NOT use markdown formatting (no **, ##, --, etc):**
+- [TITLE] for the main process title
+- [SECTION] for major section headers (Purpose, Scope, Prerequisites, Step-by-Step Instructions, Control Points, Common Issues & Troubleshooting, Frequency)
+- [SUBSECTION] for subsection headers
+- [STEP] for numbered steps - format as: "1. Step description", "2. Step description", etc.
+- [BULLET] for bullet points
+- [SCREENSHOT] on its own line to indicate where a screenshot should be placed
 
 **Document Structure:**
-1. **Process Title** - Clear, descriptive title (just the title, no "Process Title:" label)
-2. **Purpose** - Why this process exists and what it accomplishes
-3. **Scope** - What this process covers
-4. **Prerequisites** - What needs to be in place before starting (access, permissions, data, etc.)
-5. **Step-by-Step Instructions** - Numbered steps with:
-   - Clear action-oriented language (Click, Enter, Select, Navigate, etc.)
-   - Navigation paths when relevant (Menu > Options > Add Account)
-   - What data to enter
-   - What to verify or check
-   - Expected results
-   - Mark where screenshots should be referenced with: [Screenshot X]
-6. **Control Points** - Key moments where accuracy is critical (for SOX compliance)
-7. **Common Issues & Troubleshooting** - Potential problems and solutions
-8. **Frequency** - How often this process is performed
+1. [TITLE] Process Title - Clear, descriptive title
+2. [SECTION] Purpose - Why this process exists and what it accomplishes
+3. [SECTION] Scope - What this process covers
+4. [SECTION] Prerequisites - What needs to be in place before starting
+5. [SECTION] Step-by-Step Instructions - Numbered steps
+6. [SECTION] Control Points - Key moments where accuracy is critical (for SOX compliance)
+7. [SECTION] Common Issues & Troubleshooting - Potential problems and solutions
+8. [SECTION] Frequency - How often this process is performed
 
 **Writing Guidelines:**
-- Use imperative mood (command form): "Click the Submit button" not "You click the Submit button"
+- Use imperative mood: "Click the Submit button" not "You click"
 - Be concise but complete
-- Include screenshot references like [Screenshot 1], [Screenshot 2] exactly where they should appear
-- Highlight control points with ⚠️ symbol
 - Use proper accounting terminology
 - Make it audit-ready with clear accountability and verification steps
+- For lists within sections, use [BULLET] instead of numbered lists
+- Reference screenshots by placing [SCREENSHOT] on its own line where each should appear
+- Create numbered steps with [STEP] delimiter
 
-**CRITICAL: Screenshot References**
-For each screenshot provided, you MUST include [Screenshot X] in the appropriate step where that screenshot should be displayed. Match the screenshot number to the step it illustrates.
+**CRITICAL FORMATTING RULES:**
+- EVERY line MUST start with a delimiter: [TITLE], [SECTION], [SUBSECTION], [STEP], [BULLET], or be a continuation line
+- Do NOT use markdown: no **, ##, [[, ]], --, etc.
+- No other formatting - just plain text
+- Number your steps: 1. Description, 2. Description, etc.
+- When showing prerequisites/lists, use [BULLET] for each item
 
-**Format:**
-- Use markdown formatting
-- Clear headers (use ## for main sections, ### for subsections)
-- Numbered lists for sequential steps
-- Bullet points for options or notes
+**Example Format:**
+[TITLE] Account Reconciliation Process
 
-**IMPORTANT: DO NOT include any preamble or introduction text. Start directly with the Process Title.**
-**Do not say "Here is", "Of course", "I'll create", or any other introduction. Begin immediately with the SOP content.**
+[SECTION] Purpose
+This process ensures all accounts match bank statements and are properly reconciled on a monthly basis.
 
-Create documentation that would satisfy internal audit requirements and be immediately usable by a new team member.
+[SECTION] Prerequisites
+[BULLET] Active login credentials for the accounting system
+[BULLET] Current month bank statements
+[BULLET] Prior month reconciliation file
+
+[SECTION] Step-by-Step Instructions
+[STEP] 1. Open the accounting system using your login credentials.
+[SCREENSHOT]
+[STEP] 2. Navigate to Accounting menu, then select Reconciliation module.
+[SCREENSHOT]
+[STEP] 3. Select the account to reconcile from the dropdown list.
+[BULLET] Note: Contact IT if you don't have access to an account
+[BULLET] You should see all active accounts in this list
+[STEP] 4. Upload the current bank statement CSV file.
+[SCREENSHOT]
+
+Remember: Start each line with a delimiter. No exceptions. No markdown. Keep formatting simple and clean.
+
+TRANSCRIPT:
+{transcript}
+
+SCREENSHOTS TO INCLUDE:
 """
             
             content_parts.append(instructions)
             
-            # Add transcript
-            content_parts.append(f"\n\n**TRANSCRIPT:**\n{transcript}\n\n")
-            
-            # Add screenshots with context
-            content_parts.append("**SCREENSHOTS:**\n\n")
-            
+            # Add screenshot context
             for i, frame_data in enumerate(frames, 1):
                 moment = frame_data['moment']
-                
-                screenshot_context = f"""
-Screenshot {i} [{moment['timestamp']}]:
-- Type: {moment['type']}
-- Description: {moment['description']}
-"""
+                screenshot_info = f"Screenshot {i} [{moment['timestamp']}]: {moment['description']}"
                 if moment.get('navigation_path'):
-                    screenshot_context += f"- Navigation: {moment['navigation_path']}\n"
-                
-                content_parts.append(screenshot_context)
+                    screenshot_info += f" | Navigation: {moment['navigation_path']}"
+                content_parts.append(screenshot_info)
                 content_parts.append(frame_data['image'])
-                content_parts.append("\n---\n")
             
             # Generate documentation
             response = model.generate_content(content_parts)
@@ -436,10 +446,38 @@ Screenshot {i} [{moment['timestamp']}]:
         st.error(f"Details: {traceback.format_exc()}")
         return None
 
-def create_word_document(markdown_text, frames):
-    """Create a Word document with embedded screenshots"""
-    import re
+def add_paragraph_with_screenshots(doc, text, frames, style=None):
+    """Add a paragraph and embed screenshots referenced with [SCREENSHOT]"""
+    text_stripped = text.strip()
     
+    if not text_stripped:
+        return
+    
+    # Add the paragraph
+    if style:
+        doc.add_paragraph(text_stripped, style=style)
+    else:
+        doc.add_paragraph(text_stripped)
+
+def add_screenshot(doc, screenshot_num, frames):
+    """Add a screenshot image to the document"""
+    if screenshot_num <= len(frames):
+        frame_data = frames[screenshot_num - 1]
+        
+        # Add image
+        img_buffer = io.BytesIO()
+        frame_data['image'].save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        doc.add_picture(img_buffer, width=Inches(6))
+        
+        # Add caption
+        caption = doc.add_paragraph()
+        caption_run = caption.add_run(f"Screenshot {screenshot_num}: {frame_data['moment']['description']}")
+        caption_run.italic = True
+        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+def create_word_document(content, frames):
+    """Create a Word document by parsing delimiter-based content"""
     try:
         doc = Document()
         
@@ -449,23 +487,9 @@ def create_word_document(markdown_text, frames):
         font.name = 'Calibri'
         font.size = Pt(11)
         
-        # Clean up AI response - remove preamble text only
-        # Remove lines like "Of course. Here is..." or "Certainly, here's..."
-        lines = markdown_text.split('\n')
-        start_idx = 0
-        
-        # Skip preamble lines (typically first 1-3 lines before actual content)
-        for i, line in enumerate(lines[:5]):
-            if line.strip().startswith(('Of course', 'Here is', 'Certainly', "I'll create", 'Based on')):
-                start_idx = i + 1
-                break
-        
-        # Rejoin without preamble
-        markdown_text = '\n'.join(lines[start_idx:])
-        
-        # Parse markdown and build document
-        lines = markdown_text.split('\n')
+        lines = content.split('\n')
         i = 0
+        screenshot_counter = 0
         
         while i < len(lines):
             line = lines[i].strip()
@@ -475,77 +499,45 @@ def create_word_document(markdown_text, frames):
                 i += 1
                 continue
             
-            # Handle headers
-            if line.startswith('# '):
-                # Main title (H1)
-                title = line[2:].strip()
-                p = doc.add_heading(title, level=0)
+            # Handle TITLE
+            if line.startswith('[TITLE]'):
+                title_text = line[7:].strip()
+                p = doc.add_heading(title_text, level=0)
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                
-            elif line.startswith('## '):
-                # Section header (H2)
-                doc.add_heading(line[3:].strip(), level=1)
-                
-            elif line.startswith('### '):
-                # Subsection header (H3)
-                doc.add_heading(line[4:].strip(), level=2)
             
-            # Handle screenshot references
-            elif '[Screenshot' in line:
-                # Extract screenshot number
-                matches = re.findall(r'\[Screenshot (\d+)\]', line)
-                
-                # Add the text before/after screenshot
-                text_parts = re.split(r'\[Screenshot \d+\]', line)
-                
-                for j, text in enumerate(text_parts):
-                    if text.strip():
-                        doc.add_paragraph(text.strip())
-                    
-                    # Add screenshot if there's a match
-                    if j < len(matches):
-                        screenshot_num = int(matches[j])
-                        if screenshot_num <= len(frames):
-                            frame_data = frames[screenshot_num - 1]
-                            
-                            # Save image to temporary file
-                            img_buffer = io.BytesIO()
-                            frame_data['image'].save(img_buffer, format='PNG')
-                            img_buffer.seek(0)
-                            
-                            # Add image to document
-                            doc.add_picture(img_buffer, width=Inches(6))
-                            
-                            # Add caption
-                            caption = doc.add_paragraph()
-                            caption.add_run(f"Screenshot {screenshot_num}: {frame_data['moment']['description']}").italic = True
-                            caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            # Handle SECTION
+            elif line.startswith('[SECTION]'):
+                section_text = line[9:].strip()
+                doc.add_heading(section_text, level=1)
             
-            # Handle numbered lists
-            elif re.match(r'^\d+\.', line):
-                doc.add_paragraph(line, style='List Number')
+            # Handle SUBSECTION
+            elif line.startswith('[SUBSECTION]'):
+                subsection_text = line[12:].strip()
+                doc.add_heading(subsection_text, level=2)
             
-            # Handle bullet points
-            elif line.startswith('- ') or line.startswith('* '):
-                doc.add_paragraph(line[2:], style='List Bullet')
+            # Handle STEP
+            elif line.startswith('[STEP]'):
+                step_text = line[6:].strip()
+                add_paragraph_with_screenshots(doc, step_text, frames, style='List Number')
             
-            # Handle bold text (simplified)
-            elif '**' in line:
-                p = doc.add_paragraph()
-                parts = line.split('**')
-                for idx, part in enumerate(parts):
-                    if idx % 2 == 0:
-                        p.add_run(part)
-                    else:
-                        p.add_run(part).bold = True
+            # Handle BULLET
+            elif line.startswith('[BULLET]'):
+                bullet_text = line[8:].strip()
+                add_paragraph_with_screenshots(doc, bullet_text, frames, style='List Bullet')
             
-            # Regular paragraph
+            # Handle SCREENSHOT
+            elif line.startswith('[SCREENSHOT]'):
+                screenshot_counter += 1
+                add_screenshot(doc, screenshot_counter, frames)
+            
+            # Regular text (continuation or standalone)
             else:
-                doc.add_paragraph(line)
+                if line:  # Only add non-empty lines
+                    add_paragraph_with_screenshots(doc, line, frames)
             
             i += 1
         
-        # Add footer with generation date
+        # Add footer
         section = doc.sections[0]
         footer = section.footer
         footer_para = footer.paragraphs[0]
@@ -603,7 +595,6 @@ def upload_word_doc_to_drive(word_doc_bytes, creds):
         import traceback
         st.error(f"Details: {traceback.format_exc()}")
         return None, None
-    
 
 def authenticate_google():
     """Authenticate with Google using OAuth"""
@@ -747,7 +738,6 @@ def show_moment_editor(key_moments):
     
     # Multi-select for deletion
     st.markdown("#### 🗑️ Delete Unwanted Moments")
-    # ... rest of the function
     moment_options = [
         f"{i+1}. [{m['timestamp']}] {m['type']}: {m['description'][:50]}..." 
         for i, m in enumerate(key_moments)
@@ -891,7 +881,6 @@ def show_moment_editor(key_moments):
         st.metric("Final Count", final_count, delta=final_count - original_count)
     
     return edited_moments
-    
 
 def main():
     initialize_session_state()
@@ -1044,7 +1033,6 @@ def main():
                     
                     # Clear existing frames and documentation to force regeneration
                     st.session_state.extracted_frames = None
-                    st.session_state.final_documentation = None
                     st.session_state.word_doc_bytes = None
                     
                     # Clear multiselect by removing its key from session state
@@ -1109,20 +1097,17 @@ def main():
         
         if not st.session_state.word_doc_bytes:
             if st.button("🤖 Generate Professional Documentation", type="primary"):
-                # Generate markdown internally
-                doc_markdown = generate_documentation(
+                # Generate documentation using delimiters
+                doc_content = generate_documentation(
                     st.session_state.transcript,
                     st.session_state.extracted_frames
                 )
                 
-                if doc_markdown:
-                    # Store the markdown for backup
-                    st.session_state.final_documentation = doc_markdown
-                    
+                if doc_content:
                     # Immediately create Word document
                     with st.spinner("📝 Creating Word document with embedded screenshots..."):
                         word_doc = create_word_document(
-                            doc_markdown,
+                            doc_content,
                             st.session_state.extracted_frames
                         )
                     
@@ -1152,14 +1137,7 @@ def main():
             st.caption("Professional SOP with embedded screenshots")
         
         with col2:
-            # Download backup markdown
-            st.download_button(
-                label="📥 Download as Markdown (Backup)",
-                data=st.session_state.final_documentation,
-                file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown"
-            )
-            st.caption("Raw markdown format without screenshots")
+            st.caption("Ready to share!")
         
         # Google Drive upload section
         st.markdown("---")
