@@ -1036,6 +1036,10 @@ def main():
                         frames = extract_all_frames(st.session_state.video_path, sorted_moments)
                         st.session_state.extracted_frames = frames
                     
+                    # Delete video file after extraction to save storage
+                    if os.path.exists(st.session_state.video_path):
+                        os.remove(st.session_state.video_path)
+                    
                     st.success(f"✅ Extracted {len(frames)} screenshots in chronological order!")
                     st.rerun()
         
@@ -1221,38 +1225,140 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("### 📊 Progress")
-        
-        status_items = [
-            ("Video Uploaded", st.session_state.video_path is not None),
-            ("Audio Extracted", st.session_state.audio_path is not None),
-            ("Transcript Generated", st.session_state.transcript is not None),
-            ("Key Moments Identified", st.session_state.key_moments is not None),
-            ("Frames Extracted", st.session_state.extracted_frames is not None),
-            ("Documentation Generated", st.session_state.final_documentation is not None)
-        ]
-        
-        for label, completed in status_items:
-            icon = "✅" if completed else "⏳"
-            st.markdown(f"{icon} {label}")
-        
-        st.markdown("---")
-        
         if st.button("🔄 Start New Process", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
         
         st.markdown("---")
-        st.markdown("""
-        ### 💡 Tips
         
-        - Edit moments before extracting
-        - Review screenshots carefully
-        - Download Word doc
-        - Optional: Upload to Drive
-        - Keep videos under 10 min
+        # Tips for Best Results
+        with st.expander("💡 Tips for Best Results", expanded=False):
+            st.markdown("""
+            **Video Recording:**
+            - Use a clear screen recording tool
+            - Speak clearly and descriptively
+            - Mention navigation paths explicitly (e.g., "Menu > Options > Add Account")
+            
+            **Pro Tip for Better Results:**
+            - In your video, say "**take a screenshot here**" at key moments
+            - Describe what should be highlighted (e.g., "the Export button")
+            - This helps AI sync audio to visuals more accurately
+            
+            **General Tips:**
+            - Keep recordings under 10 minutes
+            - Explain the "why" not just the "what"
+            - Review and edit moments before extracting frames
+            """)
+        
+        # Roadmap
+        with st.expander("🗺️ Roadmap & Future Features", expanded=False):
+            st.markdown("""
+            **Phase 2 - Smart Annotations:**
+            - Auto-detect and highlight UI elements referenced in audio
+            - Intelligently annotate buttons, fields, and important areas
+            - Include in final documentation for clarity
+            
+            **Phase 3 - Enhanced Frame Selection:**
+            - Preview multiple frames around each timestamp
+            - User-selected optimal screenshot capture
+            - Better sync between audio and visuals
+            
+            **Phase 4 - Advanced Features:**
+            - Multi-language support
+            - Long-form video segmentation
+            - Batch processing multiple videos
+            - Integration with document management systems
+            """)
+        
+        # Known Limitations
+        with st.expander("⚠️ Known Limitations", expanded=False):
+            st.markdown("""
+            **Screenshot Timing:**
+            - Screenshots may lag 1-2 seconds behind audio description
+            - Solution: Say "take a screenshot here" explicitly in your video
+            
+            **AI Accuracy:**
+            - Transcription works best with clear audio
+            - Key moment detection depends on explicit descriptions
+            - Works better with accounting/business terminology
+            
+            **Video Requirements:**
+            - Best results with videos under 10 minutes
+            - Supports: MP4, MOV, AVI, WebM, MKV
+            - Requires audio track for transcription
+            
+            **Current Scope:**
+            - Optimized for single-process demonstrations
+            - Best for standard business software workflows
+            """)
+        
+        # Data Security
+        with st.expander("🔒 Data Security", expanded=False):
+            st.markdown("""
+            **Video Storage:**
+            - Videos are stored as temporary files during processing
+            - Automatically deleted after screenshot frames are extracted
+            - Not retained on server after processing completes
+            
+            **API Processing:**
+            - Audio and screenshots are sent to Google's Generative AI API for analysis
+            - In enterprise deployments, can be configured to use company's firewalled enterprise Gemini instance
+            
+            **Google Drive Integration:**
+            - Generated documents are saved only to your Google Drive
+            - You explicitly authorize the app to access your Drive
+            - You retain full control and can delete files anytime
+            - App cannot access other Drive files
+            
+            **Deployment:**
+            - Prototype: Hosted on Streamlit Cloud
+            - Enterprise: Deployed on private company servers
+            - Recommended: Run on secured internal infrastructure for sensitive accounting data
+            """)
+        
+        # Tools Used
+        with st.expander("🛠️ Tools & Technologies", expanded=False):
+            st.markdown("""
+            **Core Framework:**
+            - Streamlit 1.28+
+            - Python 3.8+
+            
+            **AI & Machine Learning:**
+            - Google Generative AI (Gemini) 0.3+
+            - google-generativeai 0.3.0+
+            
+            **Video & Image Processing:**
+            - MoviePy 1.0+
+            - OpenCV (cv2) 4.8+
+            - Pillow (PIL) 10.0+
+            
+            **Document Generation:**
+            - python-docx 0.8+
+            
+            **Google Integration:**
+            - google-auth-oauthlib 1.1+
+            - google-auth-httplib2 0.2+
+            - google-api-python-client 2.100+
+            
+            **Environment & Configuration:**
+            - python-dotenv 1.0+
+            - pickle (built-in)
+            
+            **Deployment:**
+            - Streamlit Cloud (prototype)
+            - Self-hosted deployment (enterprise)
+            """)
+        
+        st.markdown("---")
+        st.markdown("""
+        ### 📝 About
+        
+        **AI Process Documentation Generator**
+        
+        Automatically converts screen recordings into professional SOPs using AI transcription and visual analysis.
         """)
+
 
 if __name__ == "__main__":
     main()
