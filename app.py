@@ -1296,7 +1296,7 @@ def main():
         with st.expander("🔒 Data Security", expanded=False):
             st.markdown("""
             **Video Storage:**
-            - Videos for this prototypeare stored as temporary files on Steamlit Cloud's servers
+            - Videos for this prototype are stored as temporary files on Steamlit Cloud's servers
             - Automatically deleted after screenshot frames are extracted
             - Not retained on Streamlit Cloud's servers after processing completes
             - Enterprise version would store temp files on company private servers
@@ -1324,9 +1324,8 @@ def main():
             - Streamlit 1.28+
             - Python 3.8+
             
-            **AI & Machine Learning:**
-            - Google Generative AI (Gemini) 0.3+
-            - google-generativeai 0.3.0+
+            **AI**
+            - Google Gemini-2.5 Pro API
             
             **Video & Image Processing:**
             - MoviePy 1.0+
