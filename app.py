@@ -89,6 +89,12 @@ st.markdown("""
         display: block;
     }
 
+    /* Hide Streamlit's inline uploaded filename row under the uploader */
+    [data-testid="stFileUploader"] [data-testid="stUploadedFile"],
+    [data-testid="stFileUploader"] .uploadedFile {
+        display: none !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1005,8 +1011,7 @@ def main():
         st.session_state.word_doc_bytes = None
         st.session_state.viewing_image = None
         st.session_state.audio_path = None
-        # Display file info
-        st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
+        # Suppress extra file info rows; only show success once saved
         
         # Save uploaded file temporarily with proper flushing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
