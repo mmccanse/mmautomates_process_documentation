@@ -1121,6 +1121,10 @@ def main():
                 # Update moments
                 st.session_state.key_moments = edited_moments
                 
+                # Clear pending new moments
+                if 'pending_new_moment' in st.session_state:
+                    del st.session_state.pending_new_moment
+
                 # Clear existing frames to force re-extraction
                 st.session_state.extracted_frames = None
                 
