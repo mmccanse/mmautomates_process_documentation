@@ -30,38 +30,48 @@ else:
 # Page config
 st.set_page_config(
     page_title="AI Process Documentation Generator",
-    page_icon="📹",
+    page_icon="https://mmautomates.com/favicon.ico",
     layout="wide"
 )
 
 # Custom CSS
 st.markdown("""
 <style>
+    :root {
+        /* Brand palette (easily adjustable) */
+        --brand-primary: #0ea5e9;       /* sky-500 */
+        --brand-primary-dark: #0284c7;  /* sky-600 */
+        --brand-accent: #14b8a6;        /* teal-500 */
+        --brand-muted: #e5e7eb;         /* gray-200 */
+        --brand-text: #0f172a;          /* slate-900 */
+        --brand-success-bg: #d1fae5;    /* emerald-100 */
+        --brand-success-border: #34d399;/* emerald-400 */
+    }
     .main-header {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
         color: white;
         border-radius: 10px;
         margin-bottom: 2rem;
     }
     .timestamp-item {
-        background: #f0f2f6;
+        background: #f8fafc;
         padding: 10px;
         margin: 5px 0;
         border-radius: 5px;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid var(--brand-primary);
     }
     .success-box {
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
+        background: var(--brand-success-bg);
+        border: 1px solid var(--brand-success-border);
         border-radius: 5px;
         padding: 15px;
         margin: 10px 0;
     }
     .moment-card {
         background: white;
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--brand-muted);
         border-radius: 8px;
         padding: 15px;
         margin: 10px 0;
@@ -87,6 +97,23 @@ st.markdown("""
     .image-viewer-container img {
         margin: 0 auto;
         display: block;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: var(--brand-primary);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+    }
+    .stButton > button:hover {
+        background: var(--brand-primary-dark);
+    }
+
+    /* Progress bar tint */
+    [data-testid="stProgressBar"] div[role="progressbar"] {
+        background: var(--brand-primary) !important;
     }
 
 </style>
