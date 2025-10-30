@@ -16,7 +16,6 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pickle
 import re
-import requests
 
 # Load environment variables
 load_dotenv()
@@ -29,25 +28,15 @@ else:
     model = None
 
 # Page config
-# Prefer local favicon (swirl2.png). Fallback to website favicon, then emoji.
-def _load_local_icon(filename):
-    try:
-        base_dir = os.path.dirname(__file__)
-        icon_path = os.path.join(base_dir, filename)
-        if os.path.exists(icon_path):
-            return Image.open(icon_path)
-    except Exception:
-        return None
-
-def _load_favicon_from_url(url):
-    try:
-        resp = requests.get(url, timeout=5)
-        resp.raise_for_status()
-        return Image.open(io.BytesIO(resp.content))
-    except Exception:
-        return None
-
-_page_icon = _load_local_icon("swirl2.png") or _load_favicon_from_url("https://mmautomates.com/favicon.ico") or "📹"
+# Prefer local favicon (swirl2.png). Streamlit page_icon accepts file path string or emoji.
+_page_icon = "📹"  # Default fallback
+try:
+    base_dir = os.path.dirname(__file__)
+    icon_path = os.path.join(base_dir, "swirl2.png")
+    if os.path.exists(icon_path):
+        _page_icon = icon_path  # Pass file path string, not PIL Image
+except Exception:
+    pass
 
 st.set_page_config(
     page_title="AI Process Documentation Generator",
