@@ -44,10 +44,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    :root {
+# Custom CSS - Cache-busted with version timestamp
+CSS_VERSION = "v2024.01"  # Update this when CSS changes to force browser reload
+st.markdown(f"""
+<style id="app-css-{CSS_VERSION}">
+    :root {{
         /* Accessible brand palette - WCAG AA compliant, based on config.toml */
         --brand-primary: #0369a1;       /* sky-700 - accessible on white (7.2:1 contrast) */
         --brand-primary-dark: #075985;  /* sky-800 - darker for hover */
@@ -64,7 +65,7 @@ st.markdown("""
         --brand-sidebar-button-hover: #075985; /* darker blue on hover */
         --brand-header-1: #0369a1;      /* sky-700 - primary for header */
         --brand-header-2: #0891b2;      /* cyan-600 - accent for header gradient */
-    }
+    }}
     /* App and sidebar backgrounds */
     [data-testid="stAppViewContainer"] {
         background: var(--brand-app-bg);
