@@ -39,7 +39,7 @@ except Exception:
     pass
 
 st.set_page_config(
-    page_title="AI Process Documentation Generator",
+    page_title="SOP ai",
     page_icon=_page_icon,
     layout="wide"
 )
