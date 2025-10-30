@@ -394,6 +394,9 @@ For each screenshot provided, you MUST include [Screenshot X] in the appropriate
 - Numbered lists for sequential steps
 - Bullet points for options or notes
 
+**IMPORTANT: DO NOT include any preamble or introduction text. Start directly with the Process Title.**
+**Do not say "Here is", "Of course", "I'll create", or any other introduction. Begin immediately with the SOP content.**
+
 Create documentation that would satisfy internal audit requirements and be immediately usable by a new team member.
 """
             
@@ -435,6 +438,41 @@ def create_word_document(markdown_text, frames):
     """Create a Word document with embedded screenshots"""
     import re
     
+    def add_paragraph_with_formatting(doc, text):
+        """Add a paragraph with markdown formatting (bold, italic) converted to Word formatting"""
+        p = doc.add_paragraph()
+        
+        # Handle bold markdown
+        # Split by ** for bold sections
+        parts = re.split(r'(\*\*.*?\*\*)', text)
+        
+        for part in parts:
+            if part.startswith('**') and part.endswith('**'):
+                # Bold text
+                bold_text = part[2:-2]
+                p.add_run(bold_text).bold = True
+            elif part:
+                # Regular text
+                p.add_run(part)
+        
+        return p
+    
+    def add_bullet_with_formatting(doc, text):
+        """Add a bullet point with markdown formatting"""
+        p = doc.add_paragraph(style='List Bullet')
+        
+        # Handle bold markdown in bullet points
+        parts = re.split(r'(\*\*.*?\*\*)', text)
+        
+        for part in parts:
+            if part.startswith('**') and part.endswith('**'):
+                # Bold text
+                bold_text = part[2:-2]
+                p.add_run(bold_text).bold = True
+            elif part:
+                # Regular text
+                p.add_run(part)
+    
     try:
         doc = Document()
         
@@ -443,6 +481,15 @@ def create_word_document(markdown_text, frames):
         font = style.font
         font.name = 'Calibri'
         font.size = Pt(11)
+        
+        # Clean up AI response - remove preamble text
+        # Remove common AI preamble patterns
+        markdown_text = re.sub(
+            r'^(Of course|Here is|Certainly|I\'ll create|Based on).*?\n\n',
+            '',
+            markdown_text,
+            flags=re.IGNORECASE | re.DOTALL
+        )
         
         # Parse markdown and build document
         lines = markdown_text.split('\n')
@@ -460,16 +507,24 @@ def create_word_document(markdown_text, frames):
             if line.startswith('# '):
                 # Main title (H1)
                 title = line[2:].strip()
+                # Remove markdown bold markers
+                title = re.sub(r'\*\*(.*?)\*\*', r'\1', title)
                 p = doc.add_heading(title, level=0)
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 
             elif line.startswith('## '):
                 # Section header (H2)
-                doc.add_heading(line[3:].strip(), level=1)
+                heading = line[3:].strip()
+                # Remove markdown bold markers
+                heading = re.sub(r'\*\*(.*?)\*\*', r'\1', heading)
+                doc.add_heading(heading, level=1)
                 
             elif line.startswith('### '):
                 # Subsection header (H3)
-                doc.add_heading(line[4:].strip(), level=2)
+                subheading = line[4:].strip()
+                # Remove markdown bold markers
+                subheading = re.sub(r'\*\*(.*?)\*\*', r'\1', subheading)
+                doc.add_heading(subheading, level=2)
             
             # Handle screenshot references
             elif '[Screenshot' in line:
@@ -481,7 +536,7 @@ def create_word_document(markdown_text, frames):
                 
                 for j, text in enumerate(text_parts):
                     if text.strip():
-                        doc.add_paragraph(text.strip())
+                        add_paragraph_with_formatting(doc, text.strip())
                     
                     # Add screenshot if there's a match
                     if j < len(matches):
@@ -502,27 +557,22 @@ def create_word_document(markdown_text, frames):
                             caption.add_run(f"Screenshot {screenshot_num}: {frame_data['moment']['description']}").italic = True
                             caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
-            # Handle numbered lists
+            # Handle numbered lists - strip the number and use normal paragraph
             elif re.match(r'^\d+\.', line):
-                doc.add_paragraph(line, style='List Number')
+                # Remove the number prefix (e.g., "1. " becomes just the text)
+                text = re.sub(r'^\d+\.\s*', '', line)
+                # Process markdown formatting
+                add_paragraph_with_formatting(doc, text)
             
             # Handle bullet points
             elif line.startswith('- ') or line.startswith('* '):
-                doc.add_paragraph(line[2:], style='List Bullet')
+                text = line[2:].strip()
+                # Process markdown formatting and add as bullet
+                add_bullet_with_formatting(doc, text)
             
-            # Handle bold text (simplified)
-            elif '**' in line:
-                p = doc.add_paragraph()
-                parts = line.split('**')
-                for idx, part in enumerate(parts):
-                    if idx % 2 == 0:
-                        p.add_run(part)
-                    else:
-                        p.add_run(part).bold = True
-            
-            # Regular paragraph
+            # Regular paragraph - process markdown formatting
             else:
-                doc.add_paragraph(line)
+                add_paragraph_with_formatting(doc, line)
             
             i += 1
         
