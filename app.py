@@ -1281,7 +1281,6 @@ def main():
             **AI Accuracy:**
             - Transcription works best with clear audio
             - Key moment detection depends on explicit descriptions
-            - Works better with accounting/business terminology
             
             **Video Requirements:**
             - Best results with videos under 10 minutes
@@ -1297,18 +1296,19 @@ def main():
         with st.expander("🔒 Data Security", expanded=False):
             st.markdown("""
             **Video Storage:**
-            - Videos are stored as temporary files during processing
+            - Videos for this prototypeare stored as temporary files on Steamlit Cloud's servers
             - Automatically deleted after screenshot frames are extracted
-            - Not retained on server after processing completes
+            - Not retained on Streamlit Cloud's servers after processing completes
+            - Enterprise version would store temp files on company private servers
             
             **API Processing:**
-            - Audio and screenshots are sent to Google's Generative AI API for analysis
+            - Audio and screenshots are sent to Google's Gemini-2.5 Pro API for analysis
             - In enterprise deployments, can be configured to use company's firewalled enterprise Gemini instance
             
             **Google Drive Integration:**
-            - Generated documents are saved only to your Google Drive
-            - You explicitly authorize the app to access your Drive
-            - You retain full control and can delete files anytime
+            - Generated documents are saved only to user's Google Drive
+            - User explicitly authorizes the app to access their Drive
+            - User retains full control and can delete files anytime
             - App cannot access other Drive files
             
             **Deployment:**
