@@ -84,6 +84,17 @@ st.markdown("""
         border-radius: 10px;
         margin-bottom: 2rem;
     }
+    .main-header h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .main-header p {
+        font-size: 1.25rem;
+        font-weight: 400;
+        margin-top: 0.5rem;
+        opacity: 0.95;
+    }
     .timestamp-item {
         background: #f8fafc;
         padding: 10px;
@@ -1004,7 +1015,7 @@ def main():
     st.markdown("""
     <div class="main-header">
         <h1>✨ AI Process Documentation Generator ✨</h1>
-        <p>Upload a screen recording → generate professional Standard Operating Procedures</p>
+        <p>Upload screen recordings → generate professional Standard Operating Procedures</p>
     </div>
     """, unsafe_allow_html=True)
     
