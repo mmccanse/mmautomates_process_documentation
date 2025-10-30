@@ -16,6 +16,7 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import pickle
 import re
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -28,9 +29,20 @@ else:
     model = None
 
 # Page config
+# Try to fetch site favicon; fall back to emoji if unavailable
+def _load_favicon_from_url(url):
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        return Image.open(io.BytesIO(resp.content))
+    except Exception:
+        return None
+
+_page_icon = _load_favicon_from_url("https://mmautomates.com/favicon.ico") or "📹"
+
 st.set_page_config(
     page_title="AI Process Documentation Generator",
-    page_icon="https://mmautomates.com/favicon.ico",
+    page_icon=_page_icon,
     layout="wide"
 )
 
@@ -46,6 +58,18 @@ st.markdown("""
         --brand-text: #0f172a;          /* slate-900 */
         --brand-success-bg: #d1fae5;    /* emerald-100 */
         --brand-success-border: #34d399;/* emerald-400 */
+        --brand-app-bg: #f5fbff;        /* very light blue */
+        --brand-sidebar-bg: #f0f9ff;    /* light sky */
+    }
+    /* App and sidebar backgrounds */
+    [data-testid="stAppViewContainer"] {
+        background: var(--brand-app-bg);
+    }
+    [data-testid="stSidebar"] {
+        background: var(--brand-sidebar-bg) !important;
+    }
+    [data-testid="stSidebar"] > div {
+        background: transparent !important;
     }
     .main-header {
         text-align: center;
@@ -1109,8 +1133,7 @@ def main():
         edited_moments = show_moment_editor(st.session_state.key_moments)
         
         # Apply changes button
-        col1, col2, col3 = st.columns([2, 2, 2])
-        
+        col1 = st.columns([3])[0]
         with col1:
             if st.button("✅ Apply Changes & Extract Frames", type="primary"):
                 # Clear pending new moments
@@ -1150,15 +1173,7 @@ def main():
                     st.success(f"✅ Extracted {len(frames)} screenshots in chronological order!")
                     st.rerun()
         
-        with col2:
-            # Download edited moments as JSON
-            json_data = json.dumps(edited_moments, indent=2)
-            st.download_button(
-                label="📥 Download as JSON",
-                data=json_data,
-                file_name=f"key_moments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
+        # Removed 'Download as JSON' to simplify UI
     
     # Show image viewer if active
     if st.session_state.viewing_image is not None and st.session_state.extracted_frames:
