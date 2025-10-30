@@ -922,25 +922,34 @@ def main():
                 if 'pending_new_moment' in st.session_state:
                     del st.session_state.pending_new_moment
                 
-                # Sort moments by timestamp (chronological order)
-                sorted_moments = sorted(
-                    edited_moments,
-                    key=lambda m: timestamp_to_seconds(m['timestamp'])
-                )
-                
-                # Update moments with sorted version
-                st.session_state.key_moments = sorted_moments
-                
-                # Clear existing frames to force re-extraction
-                st.session_state.extracted_frames = None
-                
-                # Extract frames in chronological order
-                with st.spinner("📸 Extracting screenshots from video..."):
-                    frames = extract_all_frames(st.session_state.video_path, sorted_moments)
-                    st.session_state.extracted_frames = frames
-                
-                st.success(f"✅ Extracted {len(frames)} screenshots in chronological order!")
-                st.rerun()
+                # IMPORTANT: Use edited_moments which already has deletions applied
+                if not edited_moments:
+                    st.error("Cannot extract frames - no moments remaining after edits!")
+                else:
+                    # Sort moments by timestamp (chronological order)
+                    sorted_moments = sorted(
+                        edited_moments,
+                        key=lambda m: timestamp_to_seconds(m['timestamp'])
+                    )
+                    
+                    # Update moments with sorted version
+                    st.session_state.key_moments = sorted_moments
+                    
+                    # Clear existing frames and documentation to force regeneration
+                    st.session_state.extracted_frames = None
+                    st.session_state.final_documentation = None
+                    
+                    # Clear multiselect by removing its key from session state
+                    if 'delete_moments' in st.session_state:
+                        del st.session_state['delete_moments']
+                    
+                    # Extract frames in chronological order
+                    with st.spinner("📸 Extracting screenshots from video..."):
+                        frames = extract_all_frames(st.session_state.video_path, sorted_moments)
+                        st.session_state.extracted_frames = frames
+                    
+                    st.success(f"✅ Extracted {len(frames)} screenshots in chronological order!")
+                    st.rerun()
         
         with col2:
             # Download edited moments as JSON
