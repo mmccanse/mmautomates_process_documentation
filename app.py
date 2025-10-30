@@ -934,6 +934,38 @@ def main():
         """)
         return
     
+    # Optional: Authenticate with Google first to avoid session loss on redirect
+    st.markdown("---")
+    st.markdown("### Step 0 (Optional, recommended): Authenticate with Google Drive")
+    st.caption("Authenticate now to enable Drive upload later without losing progress during the redirect.")
+    
+    # If returning from Google OAuth, finalize and store credentials early
+    try:
+        _qp_top = st.query_params
+    except Exception:
+        _qp_top = st.experimental_get_query_params()
+    if isinstance(_qp_top, dict) and _qp_top.get("code") and not st.session_state.get("oauth_processed"):
+        _creds_top = authenticate_google()
+        if _creds_top:
+            st.session_state.google_creds = _creds_top
+            st.session_state.oauth_processed = True
+            st.success("✅ Google authentication complete.")
+            try:
+                st.experimental_set_query_params()
+            except Exception:
+                pass
+            st.rerun()
+    
+    col_auth0a, col_auth0b = st.columns([1, 2])
+    with col_auth0a:
+        if st.button("🔐 Authenticate with Google now"):
+            _ = authenticate_google()
+    with col_auth0b:
+        if st.session_state.get("google_creds"):
+            st.success("Already authenticated for this session.")
+        else:
+            st.info("You can skip this and still download the Word file locally.")
+    
     # Instructions
     with st.expander("ℹ️ How to Use This Tool", expanded=False):
         st.markdown("""
