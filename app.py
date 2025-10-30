@@ -801,8 +801,15 @@ def show_moment_editor(key_moments):
     st.markdown("### 📝 Edit Key Moments")
     st.info("Review and edit the AI-identified moments. Select moments to delete, or add new ones.")
     
+    # Check if there are pending new moments to add
+    if 'pending_new_moment' in st.session_state and st.session_state.pending_new_moment:
+        # Add them to key_moments for display
+        key_moments = key_moments + st.session_state.pending_new_moment
+        st.info(f"✨ {len(st.session_state.pending_new_moment)} new moment(s) added - will be saved when you click 'Apply Changes'")
+    
     # Multi-select for deletion
     st.markdown("#### 🗑️ Delete Unwanted Moments")
+    # ... rest of the function
     moment_options = [
         f"{i+1}. [{m['timestamp']}] {m['type']}: {m['description'][:50]}..." 
         for i, m in enumerate(key_moments)
@@ -917,16 +924,17 @@ def show_moment_editor(key_moments):
         
         if st.button("➕ Add This Moment", use_container_width=True):
             if new_timestamp and new_description:
-                # Add to the end of edited moments
-                edited_moments.append({
+                # Store in session state to persist across reruns
+                if 'pending_new_moment' not in st.session_state:
+                    st.session_state.pending_new_moment = []
+                
+                st.session_state.pending_new_moment.append({
                     'timestamp': new_timestamp,
                     'type': new_type,
                     'description': new_description,
                     'navigation_path': new_nav_path
                 })
                 st.success("✅ Moment added! Click 'Apply Changes & Extract Frames' below to save.")
-                time.sleep(1)
-                st.rerun()
             else:
                 st.error("❌ Please enter both timestamp and description")
     
