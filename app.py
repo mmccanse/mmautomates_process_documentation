@@ -76,6 +76,10 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 20px;
     }
+    /* Hide Streamlit's image expand icon */
+    button[title="View fullscreen"] {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -684,8 +688,8 @@ def show_image_viewer(frames):
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Display full-size image
-    st.image(current_frame['image'], use_container_width=True)
+    # Display full-size image - reduced to 60% of container width (40% smaller)
+    st.image(current_frame['image'], use_container_width=False, width=500)
     
     # Image details
     st.markdown("---")
