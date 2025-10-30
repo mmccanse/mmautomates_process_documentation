@@ -905,14 +905,15 @@ def main():
         2. **Talk through the process** as you demonstrate - explain navigation, actions, and decisions
         3. **Upload your video** (MP4, MOV, AVI, WebM)
         4. **AI analyzes** and identifies key moments
-        5. **Review and edit** the identified moments (add, remove, or modify)
-        6. **Extract frames** to see all screenshots
-        7. **Generate documentation** - AI creates professional SOP
-        8. **Download** your documentation
+        5. **Review and edit** the identified moments (add or remove)
+        6. **Extract frames** to see screenshots of identified moments
+        7. **Generate documentation** - AI creates professional SOP with embedded screenshots
+        8. **Download** your documentation or save to Google Drive
         
         ### Tips for Best Results
         
         - Speak clearly and describe what you're doing
+        - Say "take a screenshot here" for key moments (not required, but it helps)
         - Mention navigation paths explicitly
         - Keep recordings under 10 minutes
         - Explain the "why" not just the "what"
