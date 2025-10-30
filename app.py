@@ -1245,15 +1245,8 @@ def main():
                     _ = authenticate_google()
             
             with col_auth2:
-                with st.expander("📖 Google Drive Setup Instructions"):
-                    st.markdown("""
-                    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-                    2. Create a project
-                    3. Enable Google Drive API
-                    4. Create OAuth 2.0 Desktop credentials
-                    5. Download as `credentials.json`
-                    6. Place in app directory
-                    """)
+                # Setup instructions removed to reduce confusion during demo
+                st.empty()
         else:
             st.success("✅ Authenticated with Google")
             
