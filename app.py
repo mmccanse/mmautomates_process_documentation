@@ -685,7 +685,7 @@ def show_image_viewer(frames):
     st.markdown("</div>", unsafe_allow_html=True)
     
     # Display full-size image
-    st.image(current_frame['image'], use_column_width=True)
+    st.image(current_frame['image'], use_container_width=True)
     
     # Image details
     st.markdown("---")
