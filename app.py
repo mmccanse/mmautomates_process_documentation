@@ -66,6 +66,16 @@ st.markdown("""
         margin: 10px 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    .image-viewer-container {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -89,6 +99,8 @@ def initialize_session_state():
         st.session_state.google_creds = None
     if 'moments_to_delete' not in st.session_state:
         st.session_state.moments_to_delete = set()
+    if 'viewing_image' not in st.session_state:
+        st.session_state.viewing_image = None
 
 def extract_audio_from_video(video_path):
     """Extract audio from video file"""
@@ -627,6 +639,68 @@ def authenticate_google():
         st.error(f"Details: {traceback.format_exc()}")
         return None
 
+def show_image_viewer(frames):
+    """Display the full-screen image viewer with navigation"""
+    if not frames or st.session_state.viewing_image is None:
+        return
+    
+    current_index = st.session_state.viewing_image
+    total_images = len(frames)
+    
+    # Ensure index is valid
+    if current_index < 0 or current_index >= total_images:
+        st.session_state.viewing_image = None
+        return
+    
+    current_frame = frames[current_index]
+    
+    # Create the viewer container
+    st.markdown("""
+    <div class="image-viewer-container">
+    """, unsafe_allow_html=True)
+    
+    st.markdown("### 🖼️ Image Viewer")
+    
+    # Navigation controls
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 3, 1, 1])
+    
+    with col1:
+        if st.button("← Previous", disabled=(current_index == 0), use_container_width=True):
+            st.session_state.viewing_image = current_index - 1
+            st.rerun()
+    
+    with col2:
+        st.markdown(f"<div style='text-align: center; padding: 8px;'><strong>{current_index + 1} / {total_images}</strong></div>", unsafe_allow_html=True)
+    
+    with col4:
+        if st.button("Next →", disabled=(current_index == total_images - 1), use_container_width=True):
+            st.session_state.viewing_image = current_index + 1
+            st.rerun()
+    
+    with col5:
+        if st.button("✕ Close Viewer", type="secondary", use_container_width=True):
+            st.session_state.viewing_image = None
+            st.rerun()
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Display full-size image
+    st.image(current_frame['image'], use_column_width=True)
+    
+    # Image details
+    st.markdown("---")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"**⏱️ Timestamp:** {current_frame['timestamp']}")
+        st.markdown(f"**📍 Type:** {current_frame['moment']['type']}")
+    
+    with col2:
+        st.markdown(f"**📝 Description:**\n{current_frame['moment']['description']}")
+        if current_frame['moment'].get('navigation_path'):
+            st.markdown(f"**🧭 Navigation:** `{current_frame['moment']['navigation_path']}`")
+
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
     st.markdown("### 📝 Edit Key Moments")
@@ -962,6 +1036,12 @@ def main():
                 use_container_width=True
             )
     
+    # Show image viewer if active
+    if st.session_state.viewing_image is not None and st.session_state.extracted_frames:
+        st.markdown("---")
+        show_image_viewer(st.session_state.extracted_frames)
+        st.markdown("---")
+    
     # Show extracted frames
     if st.session_state.extracted_frames:
         st.markdown("---")
@@ -986,50 +1066,6 @@ def main():
                         if st.button("🔍 View Full Size", key=f"view_{frame_index}", use_container_width=True):
                             st.session_state.viewing_image = frame_index
                             st.rerun()
-        
-        # Image viewer modal
-        if 'viewing_image' in st.session_state and st.session_state.viewing_image is not None:
-            current_index = st.session_state.viewing_image
-            total_images = len(st.session_state.extracted_frames)
-            current_frame = st.session_state.extracted_frames[current_index]
-            
-            # Create modal-like viewer
-            st.markdown("---")
-            st.markdown("### 🖼️ Image Viewer")
-            
-            # Navigation and close buttons
-            col1, col2, col3, col4, col5 = st.columns([1, 1, 3, 1, 1])
-            
-            with col1:
-                if st.button("← Previous", disabled=(current_index == 0), use_container_width=True):
-                    st.session_state.viewing_image = current_index - 1
-                    st.rerun()
-            
-            with col2:
-                st.markdown(f"**{current_index + 1} / {total_images}**")
-            
-            with col4:
-                if st.button("Next →", disabled=(current_index == total_images - 1), use_container_width=True):
-                    st.session_state.viewing_image = current_index + 1
-                    st.rerun()
-            
-            with col5:
-                if st.button("✕ Close", type="secondary", use_container_width=True):
-                    st.session_state.viewing_image = None
-                    st.rerun()
-            
-            # Display full-size image
-            st.image(current_frame['image'], use_column_width=True)
-            
-            # Image details
-            st.markdown(f"**⏱️ Timestamp:** {current_frame['timestamp']}")
-            st.markdown(f"**📍 Type:** {current_frame['moment']['type']}")
-            st.markdown(f"**📝 Description:** {current_frame['moment']['description']}")
-            if current_frame['moment'].get('navigation_path'):
-                st.markdown(f"**🧭 Navigation:** `{current_frame['moment']['navigation_path']}`")
-            
-            st.markdown("---")
-            st.info("💡 Tip: Use the Previous/Next buttons to navigate between screenshots")
         
         # Generate documentation button
         st.markdown("---")
