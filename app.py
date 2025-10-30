@@ -105,6 +105,8 @@ def initialize_session_state():
         st.session_state.extracted_frames = None
     if 'final_documentation' not in st.session_state:
         st.session_state.final_documentation = None
+    if 'word_doc_bytes' not in st.session_state:
+        st.session_state.word_doc_bytes = None
     if 'editing_mode' not in st.session_state:
         st.session_state.editing_mode = False
     if 'google_creds' not in st.session_state:
@@ -1043,6 +1045,7 @@ def main():
                     # Clear existing frames and documentation to force regeneration
                     st.session_state.extracted_frames = None
                     st.session_state.final_documentation = None
+                    st.session_state.word_doc_bytes = None
                     
                     # Clear multiselect by removing its key from session state
                     if 'delete_moments' in st.session_state:
@@ -1104,137 +1107,120 @@ def main():
         # Generate documentation button
         st.markdown("---")
         
-        if not st.session_state.final_documentation:
+        if not st.session_state.word_doc_bytes:
             if st.button("🤖 Generate Professional Documentation", type="primary"):
-                doc = generate_documentation(
+                # Generate markdown internally
+                doc_markdown = generate_documentation(
                     st.session_state.transcript,
                     st.session_state.extracted_frames
                 )
                 
-                if doc:
-                    st.session_state.final_documentation = doc
-                    st.success("✅ Documentation generated!")
-                    st.rerun()
-        else:
-            st.success("✅ Documentation ready!")
-    
-    # Show final documentation
-    if st.session_state.final_documentation:
-        st.markdown("---")
-        st.markdown("### Step 5: Your Professional Documentation")
-        
-        # Display documentation
-        with st.expander("📄 View Full Documentation", expanded=True):
-            st.markdown(st.session_state.final_documentation)
-        
-        st.markdown("---")
-        st.markdown("### 📥 Download & Save Options")
-        
-        # Always generate Word document
-        with st.spinner("📝 Creating Word document with embedded screenshots..."):
-            word_doc = create_word_document(
-                st.session_state.final_documentation,
-                st.session_state.extracted_frames
-            )
-        
-        if word_doc:
-            # Store in session state for Google Drive upload
-            if 'word_doc_bytes' not in st.session_state:
-                st.session_state.word_doc_bytes = word_doc
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Download button
-                st.download_button(
-                    label="📥 Download Word Document (.docx)",
-                    data=word_doc,
-                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    type="primary"
-                )
-            
-            with col2:
-                # Backup markdown download
-                st.download_button(
-                    label="📥 Download as Markdown (Backup)",
-                    data=st.session_state.final_documentation,
-                    file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                    mime="text/markdown"
-                )
-            
-            st.success("✅ Word document ready with all screenshots embedded!")
-            
-            # Google Drive upload section
-            st.markdown("---")
-            st.markdown("### ☁️ Upload to Google Drive (Optional)")
-            
-            if not st.session_state.google_creds:
-                st.info("""
-                💡 **Want to save this to your Google Drive?**
-                
-                Authenticate once, then you can upload the Word document directly to your Drive.
-                
-                **One-time setup required:**
-                - You need `credentials.json` from Google Cloud Console
-                - See instructions in sidebar or README
-                """)
-                
-                col_auth1, col_auth2 = st.columns([1, 2])
-                with col_auth1:
-                    if st.button("🔐 Authenticate with Google"):
-                        creds = authenticate_google()
-                        if creds:
-                            st.session_state.google_creds = creds
-                            st.success("✅ Authentication successful!")
-                            st.rerun()
-                
-                with col_auth2:
-                    with st.expander("📖 Google Drive Setup Instructions"):
-                        st.markdown("""
-                        1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-                        2. Create a project
-                        3. Enable Google Drive API
-                        4. Create OAuth 2.0 Desktop credentials
-                        5. Download as `credentials.json`
-                        6. Place in app directory
-                        """)
-            else:
-                st.success("✅ Authenticated with Google")
-                
-                col_upload1, col_upload2 = st.columns([1, 1])
-                
-                with col_upload1:
-                    if st.button("☁️ Upload to Google Drive", type="primary"):
-                        with st.spinner("Uploading to Google Drive..."):
-                            file_url, file_id = upload_word_doc_to_drive(
-                                st.session_state.word_doc_bytes,
-                                st.session_state.google_creds
-                            )
-                        
-                        if file_url:
-                            st.success("✅ Uploaded successfully!")
-                            st.markdown(f"**[Open in Google Drive]({file_url})**")
-                            st.info("💡 Tip: Click 'Open with Google Docs' in Drive to convert to Google Doc format if desired.")
-                        else:
-                            st.error("Upload failed. Please try downloading instead.")
-                
-                with col_upload2:
-                    if st.button("🔄 Change Google Account"):
-                        st.session_state.google_creds = None
-                        if os.path.exists('token.pickle'):
-                            os.remove('token.pickle')
+                if doc_markdown:
+                    # Store the markdown for backup
+                    st.session_state.final_documentation = doc_markdown
+                    
+                    # Immediately create Word document
+                    with st.spinner("📝 Creating Word document with embedded screenshots..."):
+                        word_doc = create_word_document(
+                            doc_markdown,
+                            st.session_state.extracted_frames
+                        )
+                    
+                    if word_doc:
+                        st.session_state.word_doc_bytes = word_doc
+                        st.success("✅ Documentation generated and ready to download!")
                         st.rerun()
-        
         else:
-            st.error("Failed to create Word document.")
-            # Fallback to markdown
+            st.success("✅ Documentation ready to download!")
+    
+    # Show download options
+    if st.session_state.word_doc_bytes:
+        st.markdown("---")
+        st.markdown("### Step 5: Download Your Professional Documentation")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Download Word document
             st.download_button(
-                label="📥 Download as Markdown",
+                label="📥 Download Word Document (.docx)",
+                data=st.session_state.word_doc_bytes,
+                file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary"
+            )
+            st.caption("Professional SOP with embedded screenshots")
+        
+        with col2:
+            # Download backup markdown
+            st.download_button(
+                label="📥 Download as Markdown (Backup)",
                 data=st.session_state.final_documentation,
                 file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                 mime="text/markdown"
             )
+            st.caption("Raw markdown format without screenshots")
+        
+        # Google Drive upload section
+        st.markdown("---")
+        st.markdown("### ☁️ Upload to Google Drive (Optional)")
+        
+        if not st.session_state.google_creds:
+            st.info("""
+            💡 **Want to save this to your Google Drive?**
+            
+            Authenticate once, then you can upload the Word document directly to your Drive.
+            
+            **One-time setup required:**
+            - You need `credentials.json` from Google Cloud Console
+            - See instructions in sidebar or README
+            """)
+            
+            col_auth1, col_auth2 = st.columns([1, 2])
+            with col_auth1:
+                if st.button("🔐 Authenticate with Google"):
+                    creds = authenticate_google()
+                    if creds:
+                        st.session_state.google_creds = creds
+                        st.success("✅ Authentication successful!")
+                        st.rerun()
+            
+            with col_auth2:
+                with st.expander("📖 Google Drive Setup Instructions"):
+                    st.markdown("""
+                    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+                    2. Create a project
+                    3. Enable Google Drive API
+                    4. Create OAuth 2.0 Desktop credentials
+                    5. Download as `credentials.json`
+                    6. Place in app directory
+                    """)
+        else:
+            st.success("✅ Authenticated with Google")
+            
+            col_upload1, col_upload2 = st.columns([1, 1])
+            
+            with col_upload1:
+                if st.button("☁️ Upload to Google Drive", type="primary"):
+                    with st.spinner("Uploading to Google Drive..."):
+                        file_url, file_id = upload_word_doc_to_drive(
+                            st.session_state.word_doc_bytes,
+                            st.session_state.google_creds
+                        )
+                    
+                    if file_url:
+                        st.success("✅ Uploaded successfully!")
+                        st.markdown(f"**[Open in Google Drive]({file_url})**")
+                        st.info("💡 Tip: Click 'Open with Google Docs' in Drive to convert to Google Doc format if desired.")
+                    else:
+                        st.error("Upload failed. Please try downloading instead.")
+            
+            with col_upload2:
+                if st.button("🔄 Change Google Account"):
+                    st.session_state.google_creds = None
+                    if os.path.exists('token.pickle'):
+                        os.remove('token.pickle')
+                    st.rerun()
     
     # Sidebar
     with st.sidebar:
