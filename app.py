@@ -1003,8 +1003,8 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>AI Process Documentation Generator</h1>
-        <p>Upload a screen recording → AI generates professional documentation</p>
+        <h1>✨ AI Process Documentation Generator ✨</h1>
+        <p>Upload a screen recording → generate professional Standard Operating Procedures</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1477,9 +1477,9 @@ def main():
         st.markdown("""
         ### 📝 About
         
-        **AI Process Documentation Generator**
+        ***AI Process Documentation Generator***
         
-        Automatically converts screen recordings into professional Standard Operating Procedures (SOPs) using AI transcription and visual analysis.
+        Converts screen recordings into professional Standard Operating Procedures (SOPs) using AI transcription and visual analysis.
         """)
 
 
