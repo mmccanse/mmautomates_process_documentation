@@ -48,16 +48,16 @@ st.set_page_config(
 st.markdown("""
 <style>
     :root {
-        /* Brand palette (easily adjustable) */
-        --brand-primary: #0ea5e9;       /* sky-500 */
-        --brand-primary-dark: #0284c7;  /* sky-600 */
-        --brand-accent: #14b8a6;        /* teal-500 */
+        /* Brand palette - matching config.toml theme */
+        --brand-primary: #041219;       /* from config.toml primaryColor */
+        --brand-primary-dark: #020a0d;  /* darker variant */
+        --brand-accent: #14b8a6;        /* teal accent */
         --brand-muted: #e5e7eb;         /* gray-200 */
         --brand-text: #0f172a;          /* slate-900 */
         --brand-success-bg: #d1fae5;    /* emerald-100 */
         --brand-success-border: #34d399;/* emerald-400 */
-        --brand-app-bg: #f5fbff;        /* very light blue */
-        --brand-sidebar-bg: #f0f9ff;    /* light sky */
+        --brand-app-bg: #d1effe;        /* from config.toml backgroundColor */
+        --brand-sidebar-bg: #ffffff;    /* from config.toml secondaryBackgroundColor */
     }
     /* App and sidebar backgrounds */
     [data-testid="stAppViewContainer"] {
