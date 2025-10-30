@@ -59,7 +59,9 @@ st.markdown("""
         --brand-success-bg: #d1fae5;    /* emerald-100 - light success background */
         --brand-success-border: #10b981;/* emerald-500 - accessible success color */
         --brand-app-bg: #d1effe;        /* light blue from config.toml */
-        --brand-sidebar-bg: #ffffff;    /* white sidebar from config.toml */
+        --brand-sidebar-bg: #f0f7fb;    /* very subtle blue-gray - creates gentle separation */
+        --brand-sidebar-button: #0369a1; /* primary blue for sidebar buttons */
+        --brand-sidebar-button-hover: #075985; /* darker blue on hover */
         --brand-header-1: #0369a1;      /* sky-700 - primary for header */
         --brand-header-2: #0891b2;      /* cyan-600 - accent for header gradient */
     }
@@ -135,6 +137,16 @@ st.markdown("""
     }
     .stButton > button:hover {
         background: var(--brand-primary-dark);
+    }
+
+    /* Sidebar-specific button styling - subtle but clear */
+    [data-testid="stSidebar"] .stButton > button {
+        background: var(--brand-sidebar-button);
+        width: 100%;
+        font-weight: 500;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: var(--brand-sidebar-button-hover);
     }
 
     /* Progress bar tint */
