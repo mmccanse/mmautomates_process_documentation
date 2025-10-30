@@ -599,63 +599,91 @@ def upload_word_doc_to_drive(word_doc_bytes, creds):
         return None, None
 
 def authenticate_google():
-    """Authenticate with Google using OAuth"""
+    """Authenticate with Google using a hosted Web OAuth flow (Streamlit Cloud compatible).
+
+    Behavior:
+    - If the current request contains an OAuth callback (code/state), exchange it for tokens and return creds.
+    - Otherwise, generate an authorization URL and prompt the user to authenticate, then return None.
+    """
     try:
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        from google.auth.transport.requests import Request
+        from google_auth_oauthlib.flow import Flow
         
-        SCOPES = ['https://www.googleapis.com/auth/documents', 
+        SCOPES = ['https://www.googleapis.com/auth/documents',
                   'https://www.googleapis.com/auth/drive.file']
         
-        creds = None
+        # Load OAuth settings from Streamlit secrets
+        # Expected structure in .streamlit/secrets.toml:
+        # [google_oauth]
+        # client_id = "..."
+        # client_secret = "..."
+        # redirect_uri = "https://<your-streamlit-app-url>"
+        try:
+            oauth_cfg = st.secrets["google_oauth"]
+            client_id = oauth_cfg["client_id"]
+            client_secret = oauth_cfg["client_secret"]
+            redirect_uri = oauth_cfg["redirect_uri"]
+        except Exception:
+            st.error("⚠️ Google OAuth is not configured. Add google_oauth.client_id, client_secret, and redirect_uri to Streamlit Secrets.")
+            return None
         
-        # Check if we have saved credentials
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
+        client_config = {
+            "web": {
+                "client_id": client_id,
+                "project_id": "streamlit-sop",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_secret": client_secret,
+                "redirect_uris": [redirect_uri]
+            }
+        }
         
-        # If no valid credentials, let user log in
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                if not os.path.exists('credentials.json'):
-                    st.error("""
-                    ⚠️ Google credentials not found!
-                    
-                    To enable Google Drive integration:
-                    1. Go to Google Cloud Console
-                    2. Create a project and enable Google Docs & Drive APIs
-                    3. Download credentials.json
-                    4. Place it in the app directory
-                    
-                    For now, please use the Word document download option.
-                    """)
-                    return None
-                
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json',
-                    scopes=SCOPES
-                )
-                
-                # Let Google handle the local server automatically
-                # port=0 means pick any available port
-                try:
-                    creds = flow.run_local_server(port=0)
-                except Exception as server_error:
-                    st.error(f"Could not open browser: {str(server_error)}")
-                    st.info("Trying alternative authentication method...")
-                    try:
-                        creds = flow.run_console()
-                    except Exception as console_error:
-                        st.error(f"Authentication failed: {str(console_error)}")
-                        return None
-                
-                # Save credentials
-                with open('token.pickle', 'wb') as token:
-                    pickle.dump(creds, token)
+        # Read query params compatibly across Streamlit versions
+        try:
+            query_params = st.query_params  # Streamlit >= 1.29
+        except Exception:
+            query_params = st.experimental_get_query_params()  # 1.28 fallback
         
-        return creds
+        code = query_params.get("code") if isinstance(query_params, dict) else None
+        if isinstance(code, list):
+            code = code[0] if code else None
+        state_param = query_params.get("state") if isinstance(query_params, dict) else None
+        if isinstance(state_param, list):
+            state_param = state_param[0] if state_param else None
+        
+        # If returning from Google's OAuth consent screen, finalize the flow
+        if code:
+            flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+            # Optional CSRF protection if we previously stored state
+            if state_param and "oauth_state" in st.session_state and st.session_state.oauth_state != state_param:
+                st.error("OAuth state mismatch. Please try authenticating again.")
+                return None
+            
+            # Exchange code for tokens
+            flow.fetch_token(code=code)
+            creds = flow.credentials
+            
+            # Clear query params to clean the URL (best-effort)
+            try:
+                st.experimental_set_query_params()  # Clears params in 1.28
+            except Exception:
+                pass
+            
+            return creds
+        
+        # Otherwise, initiate the OAuth flow by generating the authorization URL
+        flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        st.session_state.oauth_state = state
+        
+        # Present link for user to authenticate; after redirect back, the above code-path will run
+        st.markdown(f"[Click here to authenticate with Google]({authorization_url})")
+        st.info("After granting access, you will be redirected back here automatically.")
+        return None
         
     except Exception as e:
         st.error(f"Authentication error: {str(e)}")
@@ -1146,6 +1174,18 @@ def main():
         st.markdown("### ☁️ Upload to Google Drive (Optional)")
         
         if not st.session_state.google_creds:
+            # If returning from Google OAuth, finalize and store credentials
+            try:
+                _qp = st.query_params
+            except Exception:
+                _qp = st.experimental_get_query_params()
+            if isinstance(_qp, dict) and _qp.get("code"):
+                _creds = authenticate_google()
+                if _creds:
+                    st.session_state.google_creds = _creds
+                    st.success("✅ Authentication successful!")
+                    st.rerun()
+
             st.info("""
             💡 **Want to save this to your Google Drive?**
             
@@ -1159,11 +1199,8 @@ def main():
             col_auth1, col_auth2 = st.columns([1, 2])
             with col_auth1:
                 if st.button("🔐 Authenticate with Google"):
-                    creds = authenticate_google()
-                    if creds:
-                        st.session_state.google_creds = creds
-                        st.success("✅ Authentication successful!")
-                        st.rerun()
+                    # Initiates the web OAuth flow (opens consent screen). After redirect back, credentials are finalized automatically above.
+                    _ = authenticate_google()
             
             with col_auth2:
                 with st.expander("📖 Google Drive Setup Instructions"):
@@ -1344,7 +1381,7 @@ def main():
         
         **AI Process Documentation Generator**
         
-        Automatically converts screen recordings into professional SOPs using AI transcription and visual analysis.
+        Automatically converts screen recordings into professional Standard Operating Procedures (SOPs) using AI transcription and visual analysis.
         """)
 
 
