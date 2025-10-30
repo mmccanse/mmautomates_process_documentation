@@ -48,16 +48,18 @@ st.set_page_config(
 st.markdown("""
 <style>
     :root {
-        /* Brand palette - matching config.toml theme */
-        --brand-primary: #041219;       /* from config.toml primaryColor */
-        --brand-primary-dark: #020a0d;  /* darker variant */
+        /* Brand palette */
+        --brand-primary: #a78bfa;       /* light purple for buttons */
+        --brand-primary-dark: #8b5cf6;  /* darker purple for hover */
         --brand-accent: #14b8a6;        /* teal accent */
         --brand-muted: #e5e7eb;         /* gray-200 */
         --brand-text: #0f172a;          /* slate-900 */
         --brand-success-bg: #d1fae5;    /* emerald-100 */
         --brand-success-border: #34d399;/* emerald-400 */
-        --brand-app-bg: #d1effe;        /* from config.toml backgroundColor */
-        --brand-sidebar-bg: #ffffff;    /* from config.toml secondaryBackgroundColor */
+        --brand-app-bg: #d1effe;        /* light blue background */
+        --brand-sidebar-bg: #ffffff;    /* white sidebar */
+        --brand-header-1: #c4b5fd;      /* light purple for header */
+        --brand-header-2: #60a5fa;      /* light blue for header */
     }
     /* App and sidebar backgrounds */
     [data-testid="stAppViewContainer"] {
@@ -72,7 +74,7 @@ st.markdown("""
     .main-header {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
+        background: linear-gradient(90deg, var(--brand-header-1) 0%, var(--brand-header-2) 100%);
         color: white;
         border-radius: 10px;
         margin-bottom: 2rem;
