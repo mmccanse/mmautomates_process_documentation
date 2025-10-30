@@ -1296,7 +1296,7 @@ def main():
         with st.expander("🔒 Data Security", expanded=False):
             st.markdown("""
             **Video Storage:**
-            - Videos for this prototype are stored as temporary files on Steamlit Cloud's servers
+            - Videos for this prototype are stored as temporary files on Streamlit Cloud's servers
             - Automatically deleted after screenshot frames are extracted
             - Not retained on Streamlit Cloud's servers after processing completes
             - Enterprise version would store temp files on company private servers
@@ -1347,6 +1347,28 @@ def main():
             **Deployment:**
             - Streamlit Cloud (prototype)
             - Self-hosted deployment (enterprise)
+            """)
+        
+        # Accounting Use Cases
+        with st.expander("📊 Accounting Use Cases", expanded=False):
+            st.markdown("""
+            **Training New Team Members:**
+            - Create comprehensive, step-by-step process documentation
+            - Include visual screenshots showing exactly where to click
+            - Reduce onboarding time with professional SOPs
+            - Ensure consistency in process execution across team
+            
+            **Sharing Process Information Among Team:**
+            - Document accounting workflows that team members need to know
+            - Distribute professional SOPs to different departments
+            - Maintain single source of truth for process documentation
+            - Easy updates: re-record and regenerate docs when processes change
+            
+            **Walkthrough Support for Auditors:**
+            - Provide auditors with detailed process documentation and screenshots
+            - Demonstrate control points and verification steps
+            - Show compliance with accounting policies and procedures
+            - Create audit-ready documentation with timestamps and approvals
             """)
         
         st.markdown("---")
