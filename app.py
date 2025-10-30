@@ -560,176 +560,7 @@ def upload_word_doc_to_drive(word_doc_bytes, creds):
         import traceback
         st.error(f"Details: {traceback.format_exc()}")
         return None, None
-    """Create a Google Doc with embedded images"""
-    try:
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaIoBaseUpload
-        
-        # Build the service
-        docs_service = build('docs', 'v1', credentials=creds)
-        drive_service = build('drive', 'v3', credentials=creds)
-        
-        # Create a new document
-        doc_title = f"Process Documentation {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        document = docs_service.documents().create(body={'title': doc_title}).execute()
-        doc_id = document.get('documentId')
-        
-        st.info(f"Created document: {doc_title}")
-        
-        # Parse markdown and build requests
-        requests = []
-        lines = markdown_text.split('\n')
-        current_index = 1
-        
-        import re
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Handle headers
-            if line.startswith('# '):
-                title = line[2:].strip()
-                requests.append({
-                    'insertText': {
-                        'location': {'index': current_index},
-                        'text': title + '\n'
-                    }
-                })
-                # Style as title
-                requests.append({
-                    'updateParagraphStyle': {
-                        'range': {
-                            'startIndex': current_index,
-                            'endIndex': current_index + len(title)
-                        },
-                        'paragraphStyle': {
-                            'namedStyleType': 'TITLE'
-                        },
-                        'fields': 'namedStyleType'
-                    }
-                })
-                current_index += len(title) + 1
-                
-            elif line.startswith('## '):
-                heading = line[3:].strip()
-                requests.append({
-                    'insertText': {
-                        'location': {'index': current_index},
-                        'text': heading + '\n'
-                    }
-                })
-                requests.append({
-                    'updateParagraphStyle': {
-                        'range': {
-                            'startIndex': current_index,
-                            'endIndex': current_index + len(heading)
-                        },
-                        'paragraphStyle': {
-                            'namedStyleType': 'HEADING_1'
-                        },
-                        'fields': 'namedStyleType'
-                    }
-                })
-                current_index += len(heading) + 1
-            
-            elif '[Screenshot' in line:
-                # Handle text before screenshot
-                text_parts = re.split(r'\[Screenshot \d+\]', line)
-                matches = re.findall(r'\[Screenshot (\d+)\]', line)
-                
-                for j, text in enumerate(text_parts):
-                    if text.strip():
-                        requests.append({
-                            'insertText': {
-                                'location': {'index': current_index},
-                                'text': text.strip() + '\n'
-                            }
-                        })
-                        current_index += len(text.strip()) + 1
-                    
-                    if j < len(matches):
-                        screenshot_num = int(matches[j])
-                        if screenshot_num <= len(frames):
-                            frame_data = frames[screenshot_num - 1]
-                            
-                            # Upload image to Drive first
-                            img_buffer = io.BytesIO()
-                            frame_data['image'].save(img_buffer, format='PNG')
-                            img_buffer.seek(0)
-                            
-                            media = MediaIoBaseUpload(img_buffer, mimetype='image/png')
-                            image_file = drive_service.files().create(
-                                body={'name': f'screenshot_{screenshot_num}.png'},
-                                media_body=media,
-                                fields='id'
-                            ).execute()
-                            
-                            # Get image ID
-                            image_id = image_file.get('id')
-                            
-                            # Make the image publicly accessible
-                            drive_service.permissions().create(
-                                fileId=image_id,
-                                body={
-                                    'type': 'anyone',
-                                    'role': 'reader'
-                                }
-                            ).execute()
-                            
-                            # Get public URL
-                            public_url = f'https://drive.google.com/uc?export=view&id={image_id}'
-                            
-                            # Insert image into document
-                            requests.append({
-                                'insertInlineImage': {
-                                    'location': {'index': current_index},
-                                    'uri': public_url,
-                                    'objectSize': {
-                                        'height': {'magnitude': 400, 'unit': 'PT'},
-                                        'width': {'magnitude': 500, 'unit': 'PT'}
-                                    }
-                                }
-                            })
-                            current_index += 1
-                            
-                            # Add caption
-                            caption_text = f"\nScreenshot {screenshot_num}: {frame_data['moment']['description']}\n\n"
-                            requests.append({
-                                'insertText': {
-                                    'location': {'index': current_index},
-                                    'text': caption_text
-                                }
-                            })
-                            current_index += len(caption_text)
-            
-            else:
-                # Regular text
-                requests.append({
-                    'insertText': {
-                        'location': {'index': current_index},
-                        'text': line + '\n'
-                    }
-                })
-                current_index += len(line) + 1
-        
-        # Execute all requests
-        if requests:
-            docs_service.documents().batchUpdate(
-                documentId=doc_id,
-                body={'requests': requests}
-            ).execute()
-        
-        # Return document URL
-        doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
-        return doc_url, doc_id
-        
-    except Exception as e:
-        st.error(f"Error creating Google Doc: {str(e)}")
-        import traceback
-        st.error(f"Details: {traceback.format_exc()}")
-        return None, None
+    
 
 def authenticate_google():
     """Authenticate with Google using OAuth"""
@@ -954,37 +785,6 @@ def show_moment_editor(key_moments):
     
     return edited_moments
     
-    # Add new moment section
-    with st.expander("➕ Add New Moment"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            new_timestamp = st.text_input("Timestamp (MM:SS)", key="new_time", placeholder="2:30")
-            new_type = st.selectbox("Type", options=['navigation', 'action', 'data_entry', 'decision', 'submission'], key="new_type")
-        
-        with col2:
-            new_description = st.text_area("Description", key="new_desc", height=100)
-            if new_type == 'navigation':
-                new_nav_path = st.text_input("Navigation Path", key="new_nav", placeholder="Menu > Options > Add Account")
-            else:
-                new_nav_path = None
-        
-        if st.button("➕ Add This Moment"):
-            if new_timestamp and new_description:
-                edited_moments.append({
-                    'timestamp': new_timestamp,
-                    'type': new_type,
-                    'description': new_description,
-                    'navigation_path': new_nav_path
-                })
-                st.success("Moment added! Click 'Apply Changes' below to update.")
-                # Clear the inputs by rerunning
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Please enter both timestamp and description")
-    
-    return edited_moments
 
 def main():
     initialize_session_state()
@@ -1118,22 +918,28 @@ def main():
         
         with col1:
             if st.button("✅ Apply Changes & Extract Frames", type="primary", use_container_width=True):
-                # Update moments
-                st.session_state.key_moments = edited_moments
-                
                 # Clear pending new moments
                 if 'pending_new_moment' in st.session_state:
                     del st.session_state.pending_new_moment
-
+                
+                # Sort moments by timestamp (chronological order)
+                sorted_moments = sorted(
+                    edited_moments,
+                    key=lambda m: timestamp_to_seconds(m['timestamp'])
+                )
+                
+                # Update moments with sorted version
+                st.session_state.key_moments = sorted_moments
+                
                 # Clear existing frames to force re-extraction
                 st.session_state.extracted_frames = None
                 
-                # Extract frames
+                # Extract frames in chronological order
                 with st.spinner("📸 Extracting screenshots from video..."):
-                    frames = extract_all_frames(st.session_state.video_path, edited_moments)
+                    frames = extract_all_frames(st.session_state.video_path, sorted_moments)
                     st.session_state.extracted_frames = frames
                 
-                st.success(f"✅ Extracted {len(frames)} screenshots!")
+                st.success(f"✅ Extracted {len(frames)} screenshots in chronological order!")
                 st.rerun()
         
         with col2:
