@@ -80,6 +80,14 @@ st.markdown("""
     button[title="View fullscreen"] {
         display: none !important;
     }
+    [data-testid="stImage"] button {
+        display: none !important;
+    }
+    .image-viewer-container img {
+        margin: 0 auto;
+        display: block;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -688,8 +696,10 @@ def show_image_viewer(frames):
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Display full-size image - reduced to 60% of container width (40% smaller)
-    st.image(current_frame['image'], use_container_width=False, width=500)
+    # Display full-size image - centered and slightly larger (550px)
+    col_left, col_img, col_right = st.columns([1, 2, 1])
+    with col_img:
+        st.image(current_frame['image'], use_container_width=False, width=550)
     
     # Image details
     st.markdown("---")
