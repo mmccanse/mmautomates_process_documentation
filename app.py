@@ -57,7 +57,7 @@ st.markdown("""
         --brand-success-bg: #d1fae5;    /* emerald-100 */
         --brand-success-border: #34d399;/* emerald-400 */
         --brand-app-bg: #f5fbff;        /* very light blue */
-        --brand-sidebar-bg: rgba(255, 128, 181, 0.4);    /* #ff80b5 at 40% opacity */
+        --brand-sidebar-bg: rgba(255, 128, 181, 0.4);    /* #9089fc at 40% opacity */
     }
     /* App and sidebar backgrounds */
     [data-testid="stAppViewContainer"] {
