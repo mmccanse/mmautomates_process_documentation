@@ -677,7 +677,7 @@ def show_image_viewer(frames):
     col1, col2, col3, col4, col5 = st.columns([1, 1, 3, 1, 1])
     
     with col1:
-        if st.button("← Previous", disabled=(current_index == 0), use_container_width=True):
+        if st.button("← Previous", disabled=(current_index == 0)):
             st.session_state.viewing_image = current_index - 1
             st.rerun()
     
@@ -685,12 +685,12 @@ def show_image_viewer(frames):
         st.markdown(f"<div style='text-align: center; padding: 8px;'><strong>{current_index + 1} / {total_images}</strong></div>", unsafe_allow_html=True)
     
     with col4:
-        if st.button("Next →", disabled=(current_index == total_images - 1), use_container_width=True):
+        if st.button("Next →", disabled=(current_index == total_images - 1)):
             st.session_state.viewing_image = current_index + 1
             st.rerun()
     
     with col5:
-        if st.button("✕ Close Viewer", type="secondary", use_container_width=True):
+        if st.button("✕ Close Viewer", type="secondary"):
             st.session_state.viewing_image = None
             st.rerun()
     
@@ -699,7 +699,7 @@ def show_image_viewer(frames):
     # Display full-size image - centered and slightly larger (550px)
     col_left, col_img, col_right = st.columns([1, 2, 1])
     with col_img:
-        st.image(current_frame['image'], use_container_width=False, width=550)
+        st.image(current_frame['image'], width=550)
     
     # Image details
     st.markdown("---")
@@ -841,7 +841,7 @@ def show_moment_editor(key_moments):
             else:
                 new_nav_path = None
         
-        if st.button("➕ Add This Moment", use_container_width=True):
+        if st.button("➕ Add This Moment"):
             if new_timestamp and new_description:
                 # Store in session state to persist across reruns
                 if 'pending_new_moment' not in st.session_state:
@@ -905,15 +905,14 @@ def main():
         2. **Talk through the process** as you demonstrate - explain navigation, actions, and decisions
         3. **Upload your video** (MP4, MOV, AVI, WebM)
         4. **AI analyzes** and identifies key moments
-        5. **Review and edit** the identified moments (add or remove)
-        6. **Extract frames** to see screenshots of identified moments
-        7. **Generate documentation** - AI creates professional SOP with embedded screenshots
-        8. **Download** your documentation or save to Google Drive
+        5. **Review and edit** the identified moments (add, remove, or modify)
+        6. **Extract frames** to see all screenshots
+        7. **Generate documentation** - AI creates professional SOP
+        8. **Download** your documentation
         
         ### Tips for Best Results
         
         - Speak clearly and describe what you're doing
-        - Say "take a screenshot here" for key moments (not required, but it helps)
         - Mention navigation paths explicitly
         - Keep recordings under 10 minutes
         - Explain the "why" not just the "what"
@@ -954,7 +953,7 @@ def main():
             
             col1, col2 = st.columns([1, 3])
             with col1:
-                process_button = st.button("🚀 Process Video", type="primary", use_container_width=True)
+                process_button = st.button("🚀 Process Video", type="primary")
             
             if process_button:
                 # Extract audio
@@ -1006,7 +1005,7 @@ def main():
         col1, col2, col3 = st.columns([2, 2, 2])
         
         with col1:
-            if st.button("✅ Apply Changes & Extract Frames", type="primary", use_container_width=True):
+            if st.button("✅ Apply Changes & Extract Frames", type="primary"):
                 # Clear pending new moments
                 if 'pending_new_moment' in st.session_state:
                     del st.session_state.pending_new_moment
@@ -1051,8 +1050,7 @@ def main():
                 label="📥 Download as JSON",
                 data=json_data,
                 file_name=f"key_moments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json",
-                use_container_width=True
+                mime="application/json"
             )
     
     # Show image viewer if active
@@ -1078,11 +1076,11 @@ def main():
                     frame_index = i + j
                     with cols[j]:
                         # Show thumbnail
-                        st.image(frame_data['image'], caption=f"{frame_data['timestamp']} - {frame_data['moment']['type']}", use_container_width=True)
+                        st.image(frame_data['image'], caption=f"{frame_data['timestamp']} - {frame_data['moment']['type']}")
                         st.caption(frame_data['moment']['description'][:100] + "...")
                         
                         # View button
-                        if st.button("🔍 View Full Size", key=f"view_{frame_index}", use_container_width=True):
+                        if st.button("🔍 View Full Size", key=f"view_{frame_index}"):
                             st.session_state.viewing_image = frame_index
                             st.rerun()
         
@@ -1090,7 +1088,7 @@ def main():
         st.markdown("---")
         
         if not st.session_state.final_documentation:
-            if st.button("🤖 Generate Professional Documentation", type="primary", use_container_width=True):
+            if st.button("🤖 Generate Professional Documentation", type="primary"):
                 doc = generate_documentation(
                     st.session_state.transcript,
                     st.session_state.extracted_frames
@@ -1136,7 +1134,6 @@ def main():
                     data=word_doc,
                     file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
                     type="primary"
                 )
             
@@ -1146,8 +1143,7 @@ def main():
                     label="📥 Download as Markdown (Backup)",
                     data=st.session_state.final_documentation,
                     file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                    mime="text/markdown",
-                    use_container_width=True
+                    mime="text/markdown"
                 )
             
             st.success("✅ Word document ready with all screenshots embedded!")
@@ -1169,7 +1165,7 @@ def main():
                 
                 col_auth1, col_auth2 = st.columns([1, 2])
                 with col_auth1:
-                    if st.button("🔐 Authenticate with Google", use_container_width=True):
+                    if st.button("🔐 Authenticate with Google"):
                         creds = authenticate_google()
                         if creds:
                             st.session_state.google_creds = creds
@@ -1192,7 +1188,7 @@ def main():
                 col_upload1, col_upload2 = st.columns([1, 1])
                 
                 with col_upload1:
-                    if st.button("☁️ Upload to Google Drive", type="primary", use_container_width=True):
+                    if st.button("☁️ Upload to Google Drive", type="primary"):
                         with st.spinner("Uploading to Google Drive..."):
                             file_url, file_id = upload_word_doc_to_drive(
                                 st.session_state.word_doc_bytes,
@@ -1207,7 +1203,7 @@ def main():
                             st.error("Upload failed. Please try downloading instead.")
                 
                 with col_upload2:
-                    if st.button("🔄 Change Google Account", use_container_width=True):
+                    if st.button("🔄 Change Google Account"):
                         st.session_state.google_creds = None
                         if os.path.exists('token.pickle'):
                             os.remove('token.pickle')
@@ -1220,13 +1216,12 @@ def main():
                 label="📥 Download as Markdown",
                 data=st.session_state.final_documentation,
                 file_name=f"process_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown",
-                use_container_width=True
+                mime="text/markdown"
             )
     
     # Sidebar
     with st.sidebar:
-        if st.button("🔄 Start New Process", use_container_width=True):
+        if st.button("🔄 Start New Process"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
