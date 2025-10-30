@@ -29,7 +29,16 @@ else:
     model = None
 
 # Page config
-# Try to fetch site favicon; fall back to emoji if unavailable
+# Prefer local favicon (swirl2.png). Fallback to website favicon, then emoji.
+def _load_local_icon(filename):
+    try:
+        base_dir = os.path.dirname(__file__)
+        icon_path = os.path.join(base_dir, filename)
+        if os.path.exists(icon_path):
+            return Image.open(icon_path)
+    except Exception:
+        return None
+
 def _load_favicon_from_url(url):
     try:
         resp = requests.get(url, timeout=5)
@@ -38,7 +47,7 @@ def _load_favicon_from_url(url):
     except Exception:
         return None
 
-_page_icon = _load_favicon_from_url("https://mmautomates.com/favicon.ico") or "📹"
+_page_icon = _load_local_icon("swirl2.png") or _load_favicon_from_url("https://mmautomates.com/favicon.ico") or "📹"
 
 st.set_page_config(
     page_title="AI Process Documentation Generator",
