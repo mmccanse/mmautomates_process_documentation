@@ -1003,7 +1003,7 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>📹 AI Process Documentation Generator</h1>
+        <h1>AI Process Documentation Generator</h1>
         <p>Upload a screen recording → AI generates professional documentation</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1022,7 +1022,7 @@ def main():
     # Optional: Authenticate with Google first to avoid session loss on redirect
     st.markdown("---")
     st.markdown("### Step 0 (Optional, recommended): Authenticate with Google Drive")
-    st.caption("Authenticate now to enable Drive upload later without losing progress during the redirect.")
+    st.caption("Authenticate now to enable Drive upload later without losing progress during the redirect. You can skip this and still download the Word file locally.")
     
     # If returning from Google OAuth, finalize and store credentials early
     try:
@@ -1048,8 +1048,6 @@ def main():
     with col_auth0b:
         if st.session_state.get("google_creds"):
             st.success("Already authenticated for this session.")
-        else:
-            st.info("You can skip this and still download the Word file locally.")
     
     # Instructions
     with st.expander("ℹ️ How to Use This Tool", expanded=False):
