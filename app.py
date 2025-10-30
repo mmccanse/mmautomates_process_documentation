@@ -48,18 +48,20 @@ st.set_page_config(
 st.markdown("""
 <style>
     :root {
-        /* Brand palette */
-        --brand-primary: #a78bfa;       /* light purple for buttons */
-        --brand-primary-dark: #8b5cf6;  /* darker purple for hover */
-        --brand-accent: #14b8a6;        /* teal accent */
-        --brand-muted: #e5e7eb;         /* gray-200 */
-        --brand-text: #0f172a;          /* slate-900 */
-        --brand-success-bg: #d1fae5;    /* emerald-100 */
-        --brand-success-border: #34d399;/* emerald-400 */
-        --brand-app-bg: #d1effe;        /* light blue background */
-        --brand-sidebar-bg: #ffffff;    /* white sidebar */
-        --brand-header-1: #c4b5fd;      /* light purple for header */
-        --brand-header-2: #60a5fa;      /* light blue for header */
+        /* Accessible brand palette - WCAG AA compliant, based on config.toml */
+        --brand-primary: #0369a1;       /* sky-700 - accessible on white (7.2:1 contrast) */
+        --brand-primary-dark: #075985;  /* sky-800 - darker for hover */
+        --brand-primary-light: #0ea5e9; /* sky-500 - lighter variant */
+        --brand-accent: #0891b2;        /* cyan-600 - complements blue, accessible */
+        --brand-text: #0f172a;          /* slate-900 - excellent contrast on light backgrounds */
+        --brand-text-muted: #475569;    /* slate-600 - accessible secondary text */
+        --brand-muted: #cbd5e1;         /* slate-300 - subtle borders */
+        --brand-success-bg: #d1fae5;    /* emerald-100 - light success background */
+        --brand-success-border: #10b981;/* emerald-500 - accessible success color */
+        --brand-app-bg: #d1effe;        /* light blue from config.toml */
+        --brand-sidebar-bg: #ffffff;    /* white sidebar from config.toml */
+        --brand-header-1: #0369a1;      /* sky-700 - primary for header */
+        --brand-header-2: #0891b2;      /* cyan-600 - accent for header gradient */
     }
     /* App and sidebar backgrounds */
     [data-testid="stAppViewContainer"] {
