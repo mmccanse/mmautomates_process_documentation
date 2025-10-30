@@ -1352,9 +1352,10 @@ def main():
         # Accounting Use Cases
         with st.expander("📊 Accounting Use Cases", expanded=False):
             st.markdown("""
-            - Training New Team Members
-            - Sharing Process Information Among Team
-            - Walkthrough Support for Auditors
+            - Training new team members
+            - Sharing process information among team and stakeholders
+            - Easy to update when processes change
+            - Walkthrough support for auditors
             
             """)
         
