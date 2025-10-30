@@ -364,7 +364,7 @@ Please create professional, audit-ready Standard Operating Procedure (SOP) docum
 - [TITLE] for the main process title
 - [SECTION] for major section headers (Purpose, Scope, Prerequisites, Step-by-Step Instructions, Control Points, Common Issues & Troubleshooting, Frequency)
 - [SUBSECTION] for subsection headers
-- [STEP] for numbered steps - format as: "1. Step description", "2. Step description", etc.
+- [STEP] for steps - Word will auto-number these - just provide the description without numbers
 - [BULLET] for bullet points
 - [SCREENSHOT] on its own line to indicate where a screenshot should be placed
 
@@ -373,7 +373,7 @@ Please create professional, audit-ready Standard Operating Procedure (SOP) docum
 2. [SECTION] Purpose - Why this process exists and what it accomplishes
 3. [SECTION] Scope - What this process covers
 4. [SECTION] Prerequisites - What needs to be in place before starting
-5. [SECTION] Step-by-Step Instructions - Numbered steps
+5. [SECTION] Step-by-Step Instructions - Step descriptions (will be auto-numbered)
 6. [SECTION] Control Points - Key moments where accuracy is critical (for SOX compliance)
 7. [SECTION] Common Issues & Troubleshooting - Potential problems and solutions
 8. [SECTION] Frequency - How often this process is performed
@@ -385,14 +385,13 @@ Please create professional, audit-ready Standard Operating Procedure (SOP) docum
 - Make it audit-ready with clear accountability and verification steps
 - For lists within sections, use [BULLET] instead of numbered lists
 - Reference screenshots by placing [SCREENSHOT] on its own line where each should appear
-- Create numbered steps with [STEP] delimiter
+- Do NOT manually number steps - just use [STEP] and describe what to do, Word will auto-number
 
 **CRITICAL FORMATTING RULES:**
 - EVERY line MUST start with a delimiter: [TITLE], [SECTION], [SUBSECTION], [STEP], [BULLET], or be a continuation line
 - Do NOT use markdown: no **, ##, [[, ]], --, etc.
+- Do NOT include manual numbers (1., 2., 3.) - let Word auto-number
 - No other formatting - just plain text
-- Number your steps: 1. Description, 2. Description, etc.
-- When showing prerequisites/lists, use [BULLET] for each item
 
 **Example Format:**
 [TITLE] Account Reconciliation Process
@@ -406,17 +405,19 @@ This process ensures all accounts match bank statements and are properly reconci
 [BULLET] Prior month reconciliation file
 
 [SECTION] Step-by-Step Instructions
-[STEP] 1. Open the accounting system using your login credentials.
+[STEP] Open the accounting system using your login credentials.
 [SCREENSHOT]
-[STEP] 2. Navigate to Accounting menu, then select Reconciliation module.
+[STEP] Navigate to Accounting menu, then select Reconciliation module.
 [SCREENSHOT]
-[STEP] 3. Select the account to reconcile from the dropdown list.
+[STEP] Select the account to reconcile from the dropdown list.
 [BULLET] Note: Contact IT if you don't have access to an account
 [BULLET] You should see all active accounts in this list
-[STEP] 4. Upload the current bank statement CSV file.
+[STEP] Upload the current bank statement CSV file.
 [SCREENSHOT]
 
-Remember: Start each line with a delimiter. No exceptions. No markdown. Keep formatting simple and clean.
+Notice: [STEP] has NO numbers - Word will automatically number these as 1, 2, 3, etc.
+
+Remember: Start each line with a delimiter. No manual numbers. No markdown. Keep formatting simple and clean.
 
 TRANSCRIPT:
 {transcript}
@@ -442,117 +443,6 @@ SCREENSHOTS TO INCLUDE:
             
     except Exception as e:
         st.error(f"Error generating documentation: {str(e)}")
-        import traceback
-        st.error(f"Details: {traceback.format_exc()}")
-        return None
-
-def add_paragraph_with_screenshots(doc, text, frames, style=None):
-    """Add a paragraph and embed screenshots referenced with [SCREENSHOT]"""
-    text_stripped = text.strip()
-    
-    if not text_stripped:
-        return
-    
-    # Add the paragraph
-    if style:
-        doc.add_paragraph(text_stripped, style=style)
-    else:
-        doc.add_paragraph(text_stripped)
-
-def add_screenshot(doc, screenshot_num, frames):
-    """Add a screenshot image to the document"""
-    if screenshot_num <= len(frames):
-        frame_data = frames[screenshot_num - 1]
-        
-        # Add image
-        img_buffer = io.BytesIO()
-        frame_data['image'].save(img_buffer, format='PNG')
-        img_buffer.seek(0)
-        doc.add_picture(img_buffer, width=Inches(6))
-        
-        # Add caption
-        caption = doc.add_paragraph()
-        caption_run = caption.add_run(f"Screenshot {screenshot_num}: {frame_data['moment']['description']}")
-        caption_run.italic = True
-        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-def create_word_document(content, frames):
-    """Create a Word document by parsing delimiter-based content"""
-    try:
-        doc = Document()
-        
-        # Set default font
-        style = doc.styles['Normal']
-        font = style.font
-        font.name = 'Calibri'
-        font.size = Pt(11)
-        
-        lines = content.split('\n')
-        i = 0
-        screenshot_counter = 0
-        
-        while i < len(lines):
-            line = lines[i].strip()
-            
-            # Skip empty lines
-            if not line:
-                i += 1
-                continue
-            
-            # Handle TITLE
-            if line.startswith('[TITLE]'):
-                title_text = line[7:].strip()
-                p = doc.add_heading(title_text, level=0)
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            # Handle SECTION
-            elif line.startswith('[SECTION]'):
-                section_text = line[9:].strip()
-                doc.add_heading(section_text, level=1)
-            
-            # Handle SUBSECTION
-            elif line.startswith('[SUBSECTION]'):
-                subsection_text = line[12:].strip()
-                doc.add_heading(subsection_text, level=2)
-            
-            # Handle STEP
-            elif line.startswith('[STEP]'):
-                step_text = line[6:].strip()
-                add_paragraph_with_screenshots(doc, step_text, frames, style='List Number')
-            
-            # Handle BULLET
-            elif line.startswith('[BULLET]'):
-                bullet_text = line[8:].strip()
-                add_paragraph_with_screenshots(doc, bullet_text, frames, style='List Bullet')
-            
-            # Handle SCREENSHOT
-            elif line.startswith('[SCREENSHOT]'):
-                screenshot_counter += 1
-                add_screenshot(doc, screenshot_counter, frames)
-            
-            # Regular text (continuation or standalone)
-            else:
-                if line:  # Only add non-empty lines
-                    add_paragraph_with_screenshots(doc, line, frames)
-            
-            i += 1
-        
-        # Add footer
-        section = doc.sections[0]
-        footer = section.footer
-        footer_para = footer.paragraphs[0]
-        footer_para.text = f"Generated by AI Process Documentation Generator on {datetime.now().strftime('%B %d, %Y')}"
-        footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Save to bytes
-        doc_buffer = io.BytesIO()
-        doc.save(doc_buffer)
-        doc_buffer.seek(0)
-        
-        return doc_buffer.getvalue()
-        
-    except Exception as e:
-        st.error(f"Error creating Word document: {str(e)}")
         import traceback
         st.error(f"Details: {traceback.format_exc()}")
         return None
