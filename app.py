@@ -139,6 +139,18 @@ st.markdown("""
         background: var(--brand-primary-dark);
     }
 
+    /* Download buttons - match primary button style */
+    [data-testid="baseButton-primary"] > button,
+    [data-testid="baseButton-primary"] > button[download] {
+        background-color: var(--brand-primary) !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    [data-testid="baseButton-primary"] > button:hover,
+    [data-testid="baseButton-primary"] > button[download]:hover {
+        background-color: var(--brand-primary-dark) !important;
+    }
+
     /* Sidebar-specific button styling - subtle but clear */
     [data-testid="stSidebar"] .stButton > button {
         background: var(--brand-sidebar-button);
@@ -149,9 +161,16 @@ st.markdown("""
         background: var(--brand-sidebar-button-hover);
     }
 
-    /* Progress bar tint */
+    /* Progress bar - match button color */
+    [data-testid="stProgressBar"] > div {
+        background-color: var(--brand-primary) !important;
+    }
     [data-testid="stProgressBar"] div[role="progressbar"] {
-        background: var(--brand-primary) !important;
+        background-color: var(--brand-primary) !important;
+    }
+    /* Target Streamlit progress bar fill */
+    .stProgress > div > div > div > div {
+        background-color: var(--brand-primary) !important;
     }
 
 </style>
