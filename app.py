@@ -969,16 +969,67 @@ def main():
         
         st.success(f"✅ {len(st.session_state.extracted_frames)} screenshots ready")
         
-        # Display frames in grid
+        # Display frames in grid with click to view
         cols_per_row = 3
         for i in range(0, len(st.session_state.extracted_frames), cols_per_row):
             cols = st.columns(cols_per_row)
             for j in range(cols_per_row):
                 if i + j < len(st.session_state.extracted_frames):
                     frame_data = st.session_state.extracted_frames[i + j]
+                    frame_index = i + j
                     with cols[j]:
+                        # Show thumbnail
                         st.image(frame_data['image'], caption=f"{frame_data['timestamp']} - {frame_data['moment']['type']}", use_container_width=True)
                         st.caption(frame_data['moment']['description'][:100] + "...")
+                        
+                        # View button
+                        if st.button("🔍 View Full Size", key=f"view_{frame_index}", use_container_width=True):
+                            st.session_state.viewing_image = frame_index
+                            st.rerun()
+        
+        # Image viewer modal
+        if 'viewing_image' in st.session_state and st.session_state.viewing_image is not None:
+            current_index = st.session_state.viewing_image
+            total_images = len(st.session_state.extracted_frames)
+            current_frame = st.session_state.extracted_frames[current_index]
+            
+            # Create modal-like viewer
+            st.markdown("---")
+            st.markdown("### 🖼️ Image Viewer")
+            
+            # Navigation and close buttons
+            col1, col2, col3, col4, col5 = st.columns([1, 1, 3, 1, 1])
+            
+            with col1:
+                if st.button("← Previous", disabled=(current_index == 0), use_container_width=True):
+                    st.session_state.viewing_image = current_index - 1
+                    st.rerun()
+            
+            with col2:
+                st.markdown(f"**{current_index + 1} / {total_images}**")
+            
+            with col4:
+                if st.button("Next →", disabled=(current_index == total_images - 1), use_container_width=True):
+                    st.session_state.viewing_image = current_index + 1
+                    st.rerun()
+            
+            with col5:
+                if st.button("✕ Close", type="secondary", use_container_width=True):
+                    st.session_state.viewing_image = None
+                    st.rerun()
+            
+            # Display full-size image
+            st.image(current_frame['image'], use_column_width=True)
+            
+            # Image details
+            st.markdown(f"**⏱️ Timestamp:** {current_frame['timestamp']}")
+            st.markdown(f"**📍 Type:** {current_frame['moment']['type']}")
+            st.markdown(f"**📝 Description:** {current_frame['moment']['description']}")
+            if current_frame['moment'].get('navigation_path'):
+                st.markdown(f"**🧭 Navigation:** `{current_frame['moment']['navigation_path']}`")
+            
+            st.markdown("---")
+            st.info("💡 Tip: Use the Previous/Next buttons to navigate between screenshots")
         
         # Generate documentation button
         st.markdown("---")
