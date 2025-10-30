@@ -89,12 +89,6 @@ st.markdown("""
         display: block;
     }
 
-    /* Hide Streamlit's inline uploaded filename row under the uploader */
-    [data-testid="stFileUploader"] [data-testid="stUploadedFile"],
-    [data-testid="stFileUploader"] .uploadedFile {
-        display: none !important;
-    }
-
 </style>
 """, unsafe_allow_html=True)
 
