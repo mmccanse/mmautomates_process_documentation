@@ -1004,13 +1004,17 @@ def main():
     )
     
     if uploaded_file is not None:
-        # Clear previous session artifacts when a new video is provided
-        st.session_state.transcript = None
-        st.session_state.key_moments = None
-        st.session_state.extracted_frames = None
-        st.session_state.word_doc_bytes = None
-        st.session_state.viewing_image = None
-        st.session_state.audio_path = None
+        # Clear previous session artifacts ONLY when the uploaded file changes
+        current_file_id = f"{uploaded_file.name}:{uploaded_file.size}"
+        if st.session_state.get('last_uploaded_file_id') != current_file_id:
+            st.session_state.transcript = None
+            st.session_state.key_moments = None
+            st.session_state.extracted_frames = None
+            st.session_state.word_doc_bytes = None
+            st.session_state.viewing_image = None
+            st.session_state.audio_path = None
+            st.session_state.video_path = None
+            st.session_state.last_uploaded_file_id = current_file_id
         # Suppress extra file info rows; only show success once saved
         
         # Save uploaded file temporarily with proper flushing
