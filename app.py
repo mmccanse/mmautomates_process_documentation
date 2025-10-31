@@ -102,11 +102,6 @@ st.markdown("""
         margin-bottom: 0.5rem;
         transition: background-color 0.2s ease;
     }
-    /* Make all text in expander headers bold */
-    [data-testid="stExpander"] summary *,
-    [data-testid="stExpander"] label * {
-        font-weight: 600 !important;
-    }
     [data-testid="stExpander"]:hover {
         background-color: rgba(14, 165, 233, 0.08) !important; /* light blue - sky-500 with opacity */
         border-color: var(--brand-primary-light);
@@ -119,7 +114,6 @@ st.markdown("""
     [data-testid="stExpander"] label p,
     [data-testid="stExpander"] summary span,
     [data-testid="stExpander"] label span {
-        font-weight: 600 !important;
         padding: 0.5rem;
         cursor: pointer;
         transition: color 0.2s ease;
