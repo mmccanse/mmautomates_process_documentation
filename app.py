@@ -1450,7 +1450,6 @@ def main():
             
             **Current Scope:**
             - Optimized for single-process demonstrations
-            - Best for standard business software workflows
             """)
         
         # Data Security
@@ -1483,7 +1482,7 @@ def main():
             st.markdown("""
             **Core Framework:**
             - Streamlit 1.28+
-            - Python 3.8+
+            - Python 3.11
             
             **AI**
             - Google Gemini-2.5 Pro API
@@ -1503,7 +1502,6 @@ def main():
             
             **Environment & Configuration:**
             - python-dotenv 1.0+
-            - pickle (built-in)
             
             **Deployment:**
             - Streamlit Cloud (prototype)
