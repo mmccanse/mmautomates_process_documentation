@@ -784,23 +784,50 @@ def authenticate_google():
         
         # If returning from Google's OAuth consent screen, finalize the flow
         if code:
+            # Prevent duplicate processing of the same authorization code
+            processed_codes = st.session_state.get("oauth_processed_codes", set())
+            if code in processed_codes:
+                # Code already processed, clear params and return existing creds if available
+                try:
+                    st.experimental_set_query_params()
+                except Exception:
+                    pass
+                return st.session_state.get("google_creds")
+            
             flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, redirect_uri=redirect_uri)
             # Optional CSRF protection if we previously stored state
             if state_param and "oauth_state" in st.session_state and st.session_state.oauth_state != state_param:
                 st.error("OAuth state mismatch. Please try authenticating again.")
                 return None
             
-            # Exchange code for tokens
-            flow.fetch_token(code=code)
-            creds = flow.credentials
-            
-            # Clear query params to clean the URL (best-effort)
+            # Clear query params immediately to prevent duplicate processing on reruns
             try:
                 st.experimental_set_query_params()  # Clears params in 1.28
             except Exception:
                 pass
             
-            return creds
+            try:
+                # Exchange code for tokens
+                flow.fetch_token(code=code)
+                creds = flow.credentials
+                
+                # Mark this code as processed
+                processed_codes.add(code)
+                st.session_state.oauth_processed_codes = processed_codes
+                
+                return creds
+            except Exception as token_error:
+                # If token exchange fails, don't mark as processed so user can retry
+                error_msg = str(token_error)
+                if "invalid_grant" in error_msg.lower():
+                    st.error("⚠️ Authentication failed. This usually happens if:")
+                    st.error("1. The authorization code was already used")
+                    st.error("2. The authorization code expired (try authenticating again)")
+                    st.error("3. There's a mismatch with your Google account")
+                    st.error("\n**Solution:** Clear your browser cache/cookies for this site and try authenticating again.")
+                else:
+                    st.error(f"Token exchange failed: {error_msg}")
+                return None
         
         # Otherwise, initiate the OAuth flow by generating the authorization URL
         flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, redirect_uri=redirect_uri)
@@ -810,6 +837,9 @@ def authenticate_google():
             prompt='consent'
         )
         st.session_state.oauth_state = state
+        # Clear any old processed codes when starting new auth flow
+        if "oauth_processed_codes" in st.session_state:
+            st.session_state.oauth_processed_codes = set()
         
         # Present link for user to authenticate; after redirect back, the above code-path will run
         st.markdown(f"[Click here to authenticate with Google]({authorization_url})")
@@ -1335,10 +1365,11 @@ def main():
                 _qp = st.query_params
             except Exception:
                 _qp = st.experimental_get_query_params()
-            if isinstance(_qp, dict) and _qp.get("code"):
+            if isinstance(_qp, dict) and _qp.get("code") and not st.session_state.get("oauth_processed"):
                 _creds = authenticate_google()
                 if _creds:
                     st.session_state.google_creds = _creds
+                    st.session_state.oauth_processed = True
                     st.success("✅ Authentication successful!")
                     st.rerun()
 
