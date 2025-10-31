@@ -1526,8 +1526,9 @@ def main():
         # Privacy Disclosure
         with st.expander("Privacy & Data Security", expanded=False):
             st.markdown("""
-            **📄 Full Privacy Policy:** For complete details, see our [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md).
-            
+            **📄 Legal Documents:**
+            - [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md)
+            - [Terms of Use](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/TERMS_OF_USE.md)
             
             ---
             
@@ -1577,6 +1578,8 @@ def main():
         ***AI Process Documentation Generator***
         
         Converts screen recordings into professional Standard Operating Procedures (SOPs) using AI transcription and visual analysis.
+        
+        [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md) | [Terms of Use](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/TERMS_OF_USE.md)
         """)
 
 
