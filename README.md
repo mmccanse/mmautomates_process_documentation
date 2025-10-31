@@ -40,7 +40,7 @@ The goal is to save hours of manual documentation time, ensure repeatability, an
 
 5. **Review & Edit Moments**
    - Review the AI-identified key moments
-   - Add, remove, or modify moments as needed
+   - Add or remove moments as needed
    - Edit timestamps, descriptions, and navigation paths
 
 6. **Extract Screenshots**
@@ -262,6 +262,7 @@ See `requirements.txt` for full list. Key dependencies include:
 Planned improvements include:
 - Smart annotations to highlight UI elements referenced in audio
 - Preview multiple frames around timestamps for optimal screenshot selection
+- Modify selected frames' context and annotations for better documentation clarity
 - Multi-language support
 - Long-form video segmentation
 - Batch processing of multiple videos
@@ -277,4 +278,4 @@ Planned improvements include:
 
 ## Support
 
-For issues, questions, or contributions, please [open an issue](link-to-issues) or [contact the maintainers](contact-info).
+For issues, questions, or contributions,  [contact the creator](info@mmautomates.com).

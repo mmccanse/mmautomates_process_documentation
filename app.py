@@ -1423,6 +1423,7 @@ def main():
             - Preview multiple frames around each timestamp
             - User-selected optimal screenshot capture
             - Better sync between audio and visuals
+            - Modify selected frames' context and annotations
             
             **Phase 4 - Advanced Features:**
             - Multi-language support
