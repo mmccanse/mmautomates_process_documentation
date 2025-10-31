@@ -95,11 +95,10 @@ st.markdown("""
         margin-top: 0.5rem;
         opacity: 0.95;
     }
-    /* Expander styling - bold titles and hover effects */
+    /* Expander styling - hover effects */
     [data-testid="stExpander"] {
         border: 1px solid var(--brand-muted);
         border-radius: 6px;
-        margin-bottom: 0.5rem;
         transition: background-color 0.2s ease;
     }
     [data-testid="stExpander"]:hover {
@@ -114,7 +113,6 @@ st.markdown("""
     [data-testid="stExpander"] label p,
     [data-testid="stExpander"] summary span,
     [data-testid="stExpander"] label span {
-        padding: 0.5rem;
         cursor: pointer;
         transition: color 0.2s ease;
     }
