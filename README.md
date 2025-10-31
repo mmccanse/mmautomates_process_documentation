@@ -1,271 +1,281 @@
-# Process Documenter App
+# AI Process Documentation Generator
 
 ## Overview
 
 **Purpose:**  
-The Process Documenter app enables users to **record a workflow or training process**, automatically capture screenshots at the right moments, and generate **step-by-step documentation** describing each action.  
+The AI Process Documentation Generator converts screen recordings into professional Standard Operating Procedure (SOP) documentation. Users upload a video recording where they narrate a business process, and the app automatically generates audit-ready documentation with embedded screenshots.
 
 It helps accounting and finance teams quickly document complex procedures such as:
 - Preparing journal entries  
 - Posting accruals or prepaids  
 - Running monthly close reports  
 - Uploading data to ERP systems  
+- System navigation and workflows
 
 The goal is to save hours of manual documentation time, ensure repeatability, and improve auditability across finance operations.
 
 ---
 
-## How It Works (User Flow)
+## How It Works
 
-1. **Start Recording**
-   - The user visits the app in a secure browser (HTTPS only).
-   - Clicks **“Start Capture”** to select a window, tab, or application screen to record.  
-   - Screen sharing permission is granted through the browser’s native UI (via `getDisplayMedia`).
+### User Workflow
 
-2. **Capture Steps**
-   - While demonstrating the process, the user presses a **hotkey (e.g., Ctrl+Shift+S)** or clicks a **“Mark Step”** button each time a significant action occurs.
-   - The app takes a **screenshot** of the selected window at that exact moment.  
-   - Optional: the user can add a short note describing what they just did (e.g., “Posted JE for Payroll Accruals”).
+1. **Record Your Process**
+   - Use any screen recording tool (Zoom, Loom, QuickTime, OBS, etc.)
+   - Narrate the process as you demonstrate it
+   - Explain navigation paths, actions, and decisions clearly
+   - Save the recording as MP4, MOV, AVI, WebM, or MKV format
 
-3. **Finish & Generate**
-   - When done, the user clicks **“Finish Session.”**
-   - The app sends the collected screenshots (and optional notes) to an AI model (Gemini 2.5 Pro) that:
-     - Describes each screenshot in clear, imperative language (“Click ‘New Journal Entry’ in NetSuite”).
-     - Orders them chronologically.
-     - Generates a structured Markdown document with:
+2. **Upload Video**
+   - Upload your video file to the app
+   - The app extracts the audio track for transcription
+
+3. **AI Transcription**
+   - Google's Gemini 2.5 Pro AI transcribes the audio
+   - Transcript includes timestamps for key moments
+
+4. **AI Analysis**
+   - Gemini analyzes the transcript to identify key moments where screenshots should be captured
+   - Identifies navigation paths, actions, data entry points, and decision points
+   - Returns a list of moments with timestamps and descriptions
+
+5. **Review & Edit Moments**
+   - Review the AI-identified key moments
+   - Add, remove, or modify moments as needed
+   - Edit timestamps, descriptions, and navigation paths
+
+6. **Extract Screenshots**
+   - The app extracts video frames at each identified moment
+   - Screenshots are displayed for review in chronological order
+
+7. **Generate Documentation**
+   - Gemini creates professional SOP documentation using:
+     - The transcript (for step descriptions)
+     - Screenshots (for visual context)
+   - Generates a structured Word document with:
        - Process title and purpose  
-       - Prerequisites  
-       - Numbered step-by-step actions  
-       - Optional “why this step matters” explanations  
+     - Scope and prerequisites
+     - Numbered step-by-step instructions
+     - Control points (for SOX compliance)
+     - Common issues & troubleshooting
+     - Frequency information
 
-4. **Download or Export**
-   - The resulting documentation can be:
-     - Viewed directly in the browser,
-     - Downloaded as a **PDF**, **Markdown**, or **Google Doc**, or
-     - Copied into internal wikis (Confluence, Notion, etc.).
-   - Screenshots are displayed inline beside their AI-generated descriptions.
+8. **Download or Upload**
+   - Download as Word document (.docx)
+   - Optionally upload directly to Google Drive
 
 ---
 
 ## Core Technologies
 
-| Component | Tool | Purpose |
-|------------|------|----------|
-| **Frontend UI** | Streamlit (Python) or lightweight React/Next.js frontend | Browser interface for recording and previewing steps |
-| **Screen Capture** | `navigator.mediaDevices.getDisplayMedia()` (WebRTC API) | Secure, user-consented screen capture |
-| **Snapshot Capture** | `<canvas>` element + `toBlob()` | Captures still frames on demand when user marks a step |
-| **AI Captioning & Document Generation** | Gemini 2.5 Pro API | Generates step-by-step text and structured documentation |
-| **Document Export** | Markdown → PDF/Google Docs via `pypandoc` or Google Docs API | User downloads or exports documentation |
-| **Optional Backend** | FastAPI / Streamlit server functions | Receives uploaded screenshots, calls Gemini API, deletes temp data |
-| **Data Storage** | Temporary in memory or encrypted short-term storage | Deleted automatically after generation |
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Frontend UI** | Streamlit (Python) | Web-based interface for video upload and documentation generation |
+| **Video Processing** | MoviePy | Extract audio from video files |
+| **Image Processing** | OpenCV (cv2), Pillow | Extract frames at specific timestamps from video |
+| **AI Transcription** | Google Gemini 2.5 Pro API | Transcribe audio recordings with timestamps |
+| **AI Analysis** | Google Gemini 2.5 Pro API | Identify key moments for screenshots from transcript |
+| **AI Documentation** | Google Gemini 2.5 Pro API | Generate professional SOP documentation |
+| **Document Generation** | python-docx | Create Word documents with embedded screenshots |
+| **Google Drive Integration** | Google Drive API | Upload generated documents to user's Drive |
+| **Authentication** | Google OAuth 2.0 | Secure Google Drive access with limited scope (`drive.file`) |
 
 ---
 
 ## Key Features
 
-- **Event-driven Capture:** Only snapshots at user-designated moments (no continuous video).
-- **AI-Generated Steps:** Gemini interprets screenshots and outputs concise, accurate instructions.
-- **Multi-format Export:** Markdown, PDF, or Google Doc outputs ready for SOP libraries.
-- **Audit Trail:** Each document includes metadata (timestamps, model used, version, generation time).
-- **No Installation Required:** Runs entirely in the browser; no extensions or desktop apps.
-- **Extensible:** Can be adapted later for automatic DOM-based or click-based screenshot triggers.
+- **Video-Based Processing**: Upload pre-recorded screen recordings (no live capture required)
+- **AI-Powered Transcription**: Automatic transcription with timestamps
+- **Smart Moment Detection**: AI identifies optimal screenshot capture points
+- **Interactive Editing**: Review and edit AI-identified moments before extraction
+- **Professional Documentation**: Generates audit-ready SOP documents with proper structure
+- **Multiple Export Options**: Download Word document or upload to Google Drive
+- **Google Drive Integration**: Optional seamless upload to user's Google Drive
+- **No Installation Required**: Runs entirely in a web browser
 
 ---
 
-## Security & Privacy Considerations
+## Installation & Setup
 
-### 1. User Consent & Control
-- Uses the browser’s built-in `getDisplayMedia` API (part of WebRTC).  
-- The browser **always** prompts the user to choose which screen, window, or tab to share.
-- Recording can be stopped at any time via the browser’s “Stop sharing” button.
+### Prerequisites
 
-### 2. Data Flow
-- By default, all screenshots are held **locally in browser memory** until the user clicks **“Generate.”**
-- If server-side AI processing is enabled:
-  - Images are uploaded via HTTPS to a temporary, encrypted store.
-  - Processing jobs call the Gemini API.
-  - All files are deleted automatically after the document is returned (configurable retention ≤1 hour).
+- Python 3.11+
+- Google Gemini API key
+- (Optional) Google OAuth credentials for Drive integration
 
-### 3. No Background Capture
-- The app cannot record without the user’s explicit interaction.
-- There is always a visible indicator (browser-native “Screen is being shared” notification).
+### Installation Steps
 
-### 4. Network & Hosting
-- Host on a secure, internal domain (HTTPS).
-- Enforce:
-  - TLS 1.2+,
-  - Strict Content Security Policy,
-  - No third-party analytics or tracking scripts.
-- Use SSO (Okta, Google Workspace) if deployed inside an enterprise environment.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd mmautomates_process_documentation
+   ```
 
-### 5. Data Redaction (Optional)
-- Before upload, screenshots can be **blurred or masked** client-side to hide PII, financial data, or sensitive UI elements.
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 6. Audit & Logging
-- Keep a small metadata log (who generated, when, model name, model version).
-- No raw screen content is stored long-term.
+3. **Configure API Key**
+   - Get your Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Create a `.env` file in the root directory:
+     ```
+     GEMINI_API_KEY=your_api_key_here
+     ```
 
-### 7. Enterprise Considerations
+4. **(Optional) Configure Google Drive Integration**
+   - Create a Google Cloud Project
+   - Enable Google Drive API
+   - Create OAuth 2.0 credentials
+   - Add credentials to Streamlit Secrets (`.streamlit/secrets.toml`):
+     ```toml
+     [google_oauth]
+     client_id = "your_client_id"
+     client_secret = "your_client_secret"
+     redirect_uri = "https://your-streamlit-app-url"
+     ```
 
-#### Data Privacy & Security (Production Requirements)
-
-**Current Prototype Limitations:**
-- Screenshots and audio sent to Google's Gemini API
-- No user authentication or access controls
-- Data stored temporarily in browser memory only
-- No audit trails or compliance logging
-
-**Enterprise Production Requirements:**
-
-##### 1. Data Privacy Controls
-- **On-Premises AI Processing**: Deploy AI models locally to avoid sending sensitive data to external APIs
-- **Data Redaction**: Implement automatic PII/financial data detection and blurring before processing
-- **Encryption**: End-to-end encryption for all data in transit and at rest
-- **Data Residency**: Ensure data never leaves approved geographic regions
-
-##### 2. Access Control & Authentication
-- **Single Sign-On (SSO)**: Integrate with corporate identity providers (Okta, Azure AD, etc.)
-- **Role-Based Access**: Different permission levels for recording, viewing, and managing documentation
-- **Multi-Factor Authentication**: Required for all users accessing sensitive financial processes
-- **Session Management**: Automatic timeout and secure session handling
-
-##### 3. Compliance & Audit
-- **Audit Logging**: Complete audit trail of who recorded what, when, and where
-- **Data Retention Policies**: Automatic deletion of recordings after specified periods
-- **Compliance Reporting**: Built-in reports for SOX, GDPR, and other regulatory requirements
-- **Change Management**: Version control and approval workflows for process documentation
-
-##### 4. Infrastructure Security
-- **Network Isolation**: Deploy in private networks with restricted internet access
-- **Container Security**: Use secure, scanned container images with minimal attack surface
-- **Database Security**: Encrypted databases with proper access controls
-- **Backup & Recovery**: Secure, encrypted backups with tested recovery procedures
-
-##### 5. Operational Controls
-- **Monitoring**: Real-time monitoring of system usage and potential security incidents
-- **Incident Response**: Automated alerts and response procedures for security events
-- **Regular Security Audits**: Quarterly penetration testing and vulnerability assessments
-- **Staff Training**: Regular security awareness training for all users
-
-##### 6. Data Governance
-- **Data Classification**: Automatic classification of captured content (public, internal, confidential, restricted)
-- **Approval Workflows**: Multi-level approval for sensitive process documentation
-- **Data Loss Prevention**: Automated detection and prevention of sensitive data exfiltration
-- **Third-Party Risk**: Vendor security assessments and ongoing monitoring
-
-**Implementation Priority:**
-1. **Phase 1**: Authentication, encryption, and basic audit logging
-2. **Phase 2**: Data redaction and on-premises AI processing
-3. **Phase 3**: Advanced compliance features and monitoring
-4. **Phase 4**: Full enterprise governance and risk management
-
-### 8. Architecture
-
-#### High-Level Component Flow
-```mermaid
-flowchart LR
-  subgraph Client["User Browser (HTTPS)"]
-    UI["Process Documenter UI<br/>(Streamlit Component / React)"]
-    Capture["Screen Capture via<br/>getDisplayMedia + Canvas"]
-    Steps["Marked Steps<br/>(PNG + Notes in Memory)"]
-    Exporter["Markdown/PDF Exporter"]
-  end
-
-  subgraph Server["App Server (FastAPI / Streamlit Backend)"]
-    Upload["Secure Upload Endpoint"]
-    Redactor["Optional Redaction<br/>(blur/mask PII)"]
-    AI["Gemini 2.5 Pro Client<br/>(Caption & SOP Gen)"]
-    Builder["Doc Builder<br/>(Markdown → PDF/Google Doc)"]
-    TempStore[("Ephemeral Storage")]
-    Audit[("Audit Log:<br/>user, timestamps, model, version")]
-  end
-
-  subgraph External["External Services"]
-    Gemini["Gemini 2.5 Pro API"]
-    GDocs["Google Docs API (optional)"]
-  end
-
-  UI -- "Start Capture (user consent)" --> Capture
-  Capture -- "Hotkey/Mark Step → PNG" --> Steps
-  Steps -- "Generate" --> Upload
-  Upload --> Redactor
-  Redactor --> TempStore
-  TempStore --> AI
-  AI --> Gemini
-  Gemini --> AI
-  AI --> Builder
-  Builder --> Exporter
-  Builder --> GDocs
-  Builder --> Audit
-  TempStore -- "Auto-delete ≤ N hours" --> TempStore
-```
-
-#### User Interaction Sequence
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant UI as Browser UI
-  participant CAP as "Screen Capture<br/>(getDisplayMedia + Canvas)"
-  participant S as Server Backend
-  participant G as Gemini 2.5 Pro
-  participant D as Doc Exporter
-
-  U->>UI: Open app (HTTPS, SSO optional)
-  U->>UI: Click "Start Capture"
-  UI->>CAP: Request screen share (browser picker)
-  CAP-->>U: User selects window/tab (consent)
-  U->>UI: Performs workflow steps
-  U->>UI: Press hotkey / "Mark Step"
-  UI->>CAP: Grab still frame → PNG
-  CAP-->>UI: Store {PNG, timestamp, note} in memory (local)
-  loop Repeat per step
-    U->>UI: Mark step again
-    UI->>CAP: Snapshot → PNG
-  end
-  U->>UI: Click "Finish & Generate"
-  UI->>S: Upload PNGs + notes (HTTPS)
-  S->>S: (Optional) Redact/blur sensitive regions
-  S->>G: Prompt with images for step captions/SOP
-  G-->>S: Structured steps (Markdown/JSON)
-  S->>D: Assemble Markdown → PDF/Google Doc
-  D-->>UI: Return doc (download/preview link)
-  S->>S: Write audit metadata (no content)
-  S->>S: Auto-delete temp files per retention policy
-```
-
+5. **Run the app**
+   ```bash
+   streamlit run app.py
+   ```
 
 ---
 
-## Example Output (Markdown Excerpt)
+## Usage Tips
 
-```markdown
-# Process: Create Monthly Accrual Entry
+### For Best Results
 
-**Purpose:** Record monthly accruals for software expenses.
+1. **Video Recording**
+   - Speak clearly and describe what you're doing
+   - Explicitly mention navigation paths (e.g., "go to Menu > Options > Add Account")
+   - Keep recordings under 10 minutes for best performance
+   - Explain the "why" not just the "what"
 
-**Prerequisites:** Access to NetSuite, GL account 6001, accounting period open.
+2. **Process Explanation**
+   - Describe navigation steps clearly
+   - Mention when you're clicking buttons or opening menus
+   - Explain data entry and form completion
+   - Note any decision points or important choices
 
-## Steps
+3. **After Upload**
+   - Review the transcript for accuracy
+   - Edit key moments before extracting frames
+   - Remove moments that aren't needed
+   - Add moments AI may have missed
 
-1. **Open the NetSuite Home Page**  
-   _Screenshot_  
-   The user navigates to Transactions → Financial → Make Journal Entries.
+---
 
-2. **Click “New”**  
-   _Screenshot_  
-   Opens a blank Journal Entry form.
+## Privacy & Security
 
-3. **Enter Subsidiary and Period**  
-   _Screenshot_  
-   Select “US Entity” and “September 2025” from the dropdown menus.
+### Data Processing
 
-4. **Input Debit and Credit Lines**  
-   _Screenshot_  
-   Debit Software Expense (6001) $12,000; Credit Accrued Liabilities (2100).
+- **Video Storage**: Videos are stored as temporary files during processing and automatically deleted after screenshot extraction
+- **Audio Processing**: Audio tracks are sent to Google's Gemini API for transcription
+- **Image Processing**: Screenshots are extracted from videos and sent to Gemini API for documentation generation
+- **Temporary Files**: All temporary processing files are deleted immediately after use
 
-5. **Save and Close**  
-   _Screenshot_  
-   Click “Save” to post the entry; confirm JE ID appears in confirmation message.
+### Google Drive Integration
 
+- Uses limited `drive.file` scope - only accesses files created by this app
+- Cannot access, read, modify, or delete existing Drive files
+- User explicitly authorizes access via Google OAuth consent screen
+- All data transmission encrypted via HTTPS
 
+### Important Security Notice
 
+⚠️ **DO NOT upload videos containing:**
+- Passwords, credentials, or authentication codes
+- Social Security Numbers or personal identification numbers
+- Financial account numbers or routing information
+- Proprietary trade secrets or confidential business information
+- Any other highly sensitive data
+
+**Data Processing**: Audio, transcripts, and screenshots are processed by Google's Gemini API (third-party service). Processing is subject to [Google's Gemini API terms for paid services](https://ai.google.dev/gemini-api/terms#paid-services).
+
+**Deployment**: This prototype is hosted on Streamlit Community Cloud. For enterprise use, this can be deployed on internal company servers for enhanced security. Enterprise deployments can also be configured to use a company's firewalled enterprise Gemini instance.
+
+---
+
+## Output Format
+
+The app generates professional Word documents (.docx) with the following structure:
+
+1. **Title**: Clear, descriptive process title
+2. **Purpose**: Why this process exists and what it accomplishes
+3. **Scope**: What this process covers
+4. **Prerequisites**: What needs to be in place before starting
+5. **Step-by-Step Instructions**: Numbered steps with embedded screenshots
+6. **Control Points**: Key moments where accuracy is critical (for SOX compliance)
+7. **Common Issues & Troubleshooting**: Potential problems and solutions
+8. **Frequency**: How often this process is performed
+
+Screenshots are embedded inline with each relevant step, providing visual context for the instructions.
+
+---
+
+## Technical Architecture
+
+### Processing Flow
+
+1. **Video Upload** → Video file saved to temporary storage
+2. **Audio Extraction** → Audio track extracted using MoviePy
+3. **Transcription** → Audio sent to Gemini API for transcription with timestamps
+4. **Moment Analysis** → Transcript analyzed by Gemini to identify key screenshot moments
+5. **User Review** → User can edit, add, or remove identified moments
+6. **Frame Extraction** → OpenCV extracts video frames at specified timestamps
+7. **Documentation Generation** → Transcript + screenshots sent to Gemini for SOP generation
+8. **Word Document Creation** → python-docx creates formatted Word document with embedded images
+9. **Export** → Download locally or upload to Google Drive
+10. **Cleanup** → All temporary files deleted
+
+### Key Functions
+
+- `extract_audio_from_video()`: Extracts audio track from video file
+- `transcribe_audio_with_gemini()`: Transcribes audio using Gemini API
+- `analyze_transcript_for_key_moments()`: Analyzes transcript to identify screenshot moments
+- `extract_all_frames()`: Extracts video frames at specified timestamps
+- `generate_documentation()`: Creates SOP documentation from transcript and screenshots
+- `create_word_document()`: Builds Word document with proper formatting
+- `upload_word_doc_to_drive()`: Uploads document to Google Drive
+- `authenticate_google()`: Handles Google OAuth flow
+
+---
+
+## Requirements
+
+See `requirements.txt` for full list. Key dependencies include:
+
+- `streamlit` - Web framework
+- `google-generativeai` - Gemini API client
+- `moviepy` - Video processing
+- `opencv-python` - Image/video frame extraction
+- `Pillow` - Image processing
+- `python-docx` - Word document generation
+- `google-auth-oauthlib` - Google OAuth authentication
+- `google-api-python-client` - Google Drive API client
+- `python-dotenv` - Environment variable management
+
+---
+
+## Future Enhancements
+
+Planned improvements include:
+- Smart annotations to highlight UI elements referenced in audio
+- Preview multiple frames around timestamps for optimal screenshot selection
+- Multi-language support
+- Long-form video segmentation
+- Batch processing of multiple videos
+- Integration with document management systems
+
+---
+
+## License
+
+[Add your license information here]
+
+---
+
+## Support
+
+For issues, questions, or contributions, please [open an issue](link-to-issues) or [contact the maintainers](contact-info).

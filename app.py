@@ -1458,7 +1458,7 @@ def main():
             - Streamlit 1.28+
             - Python 3.11
             
-            **AI**
+            **AI:**
             - Google Gemini-2.5 Pro API
             
             **Video & Image Processing:**
