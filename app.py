@@ -95,6 +95,32 @@ st.markdown("""
         margin-top: 0.5rem;
         opacity: 0.95;
     }
+    /* Expander styling - bold titles and hover effects */
+    [data-testid="stExpander"] {
+        border: 1px solid var(--brand-muted);
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.2s ease;
+    }
+    [data-testid="stExpander"]:hover {
+        background-color: rgba(14, 165, 233, 0.08) !important; /* light blue - sky-500 with opacity */
+        border-color: var(--brand-primary-light);
+    }
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] label {
+        font-weight: 600 !important;
+        padding: 0.5rem;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    [data-testid="stExpander"]:hover summary,
+    [data-testid="stExpander"]:hover label {
+        color: var(--brand-primary);
+    }
+    [data-testid="stExpander"][open] {
+        background-color: rgba(14, 165, 233, 0.05) !important; /* lighter blue when open */
+        border-color: var(--brand-primary);
+    }
     .timestamp-item {
         background: #f8fafc;
         padding: 10px;
