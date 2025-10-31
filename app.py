@@ -1526,9 +1526,8 @@ def main():
         # Privacy Disclosure
         with st.expander("Privacy & Data Security", expanded=False):
             st.markdown("""
-            **📄 Full Privacy Policy:** For complete details, see our [Privacy Policy](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/blob/main/PRIVACY_POLICY.md).
+            **📄 Full Privacy Policy:** For complete details, see our [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md).
             
-            *Note: Update the GitHub repository URL in app.py (line ~1529) with your actual repository path.*
             
             ---
             
