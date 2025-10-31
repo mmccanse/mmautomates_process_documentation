@@ -1526,6 +1526,12 @@ def main():
         # Privacy Disclosure
         with st.expander("Privacy & Data Security", expanded=False):
             st.markdown("""
+            **📄 Full Privacy Policy:** For complete details, see our [Privacy Policy](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/blob/main/PRIVACY_POLICY.md).
+            
+            *Note: Update the GitHub repository URL in app.py (line ~1529) with your actual repository path.*
+            
+            ---
+            
             **⚠️ Important: Sensitive Data Notice**
             
             **DO NOT upload videos containing:**

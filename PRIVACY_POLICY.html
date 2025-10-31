@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy & Data Security - AI Process Documentation Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0369a1;
+            border-bottom: 3px solid #0369a1;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #075985;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e5e5;
+        }
+        h3 {
+            color: #0891b2;
+            margin-top: 20px;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        a {
+            color: #0369a1;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .last-updated {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        .contact-info {
+            background-color: #e0f2fe;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy & Data Security</h1>
+        <p class="last-updated"><strong>Last Updated:</strong> [Date to be updated]</p>
+        
+        <div class="contact-info">
+            <strong>Contact:</strong> <a href="https://mmautomates.com/#contact">mmautomates.com/#contact</a>
+        </div>
+
+        <h2>Overview</h2>
+        <p>This Privacy Policy describes how the AI Process Documentation Generator ("the App", "we", "our") collects, uses, and protects your data when you use our application.</p>
+
+        <div class="warning">
+            <h3>⚠️ Important: Sensitive Data Notice</h3>
+            <p><strong>DO NOT upload videos containing:</strong></p>
+            <ul>
+                <li>Passwords, credentials, or authentication codes</li>
+                <li>Social Security Numbers or personal identification numbers</li>
+                <li>Financial account numbers or routing information</li>
+                <li>Proprietary trade secrets or confidential business information</li>
+                <li>Any other highly sensitive data</li>
+            </ul>
+            <p>By using this application, you acknowledge that you will not upload sensitive data and that any data you upload may be processed by third-party AI services.</p>
+        </div>
+
+        <h2>Data Collection & Processing</h2>
+
+        <h3>Video Storage</h3>
+        <ul>
+            <li>Videos are stored as temporary files during processing</li>
+            <li>Videos are automatically deleted immediately after screenshots are extracted</li>
+            <li>Videos are not retained on servers after processing completes</li>
+            <li>This prototype is hosted on Streamlit Community Cloud</li>
+            <li>For enterprise use, this can be deployed on internal company servers for enhanced security</li>
+        </ul>
+
+        <h3>Data Processing Pipeline</h3>
+        <p>When you upload a video file, the following data processing occurs:</p>
+        <ol>
+            <li><strong>Video Upload</strong>: Your video file is temporarily stored on our servers</li>
+            <li><strong>Audio Extraction</strong>: The audio track is extracted from your video</li>
+            <li><strong>Audio Transcription</strong>: Audio is sent to Google's Gemini 2.5 Pro API for transcription</li>
+            <li><strong>Analysis</strong>: The transcript is analyzed by Gemini to identify key moments for screenshots</li>
+            <li><strong>Frame Extraction</strong>: Video frames are extracted at identified timestamps</li>
+            <li><strong>Documentation Generation</strong>: Transcript and screenshots are sent to Gemini to generate documentation</li>
+            <li><strong>File Creation</strong>: A Word document is created with your generated documentation</li>
+            <li><strong>Cleanup</strong>: All temporary files are deleted immediately after processing</li>
+        </ol>
+
+        <h2>Google Drive Integration</h2>
+
+        <h3>Scope of Access</h3>
+        <ul>
+            <li>Generated documents are saved only to files created by this app in your Google Drive</li>
+            <li>The app uses the <code>drive.file</code> OAuth scope, which only allows access to files it creates</li>
+            <li>The app <strong>cannot</strong> access, read, modify, or delete your existing Drive files</li>
+            <li>You explicitly authorize Drive access via Google's OAuth consent screen</li>
+        </ul>
+
+        <h3>Your Control</h3>
+        <ul>
+            <li>You retain full control over uploaded documents and can delete them anytime</li>
+            <li>You can revoke app access at any time through your <a href="https://myaccount.google.com/permissions">Google Account Security settings</a></li>
+            <li>Data transmission to Google Drive is encrypted via HTTPS</li>
+        </ul>
+
+        <h3>Data Transmission</h3>
+        <ul>
+            <li>All data transmission to Google Drive is encrypted via HTTPS</li>
+            <li>Authentication uses OAuth 2.0 with secure token handling</li>
+            <li>No credentials are stored on our servers</li>
+        </ul>
+
+        <h2>Gemini API Processing</h2>
+
+        <h3>Data Sent to Google</h3>
+        <p>The following data is sent to Google's Gemini 2.5 Pro API for processing:</p>
+        <ol>
+            <li><strong>Audio Recordings</strong>: Complete audio track extracted from your video</li>
+            <li><strong>Transcripts</strong>: Full text transcription of spoken content (generated by Gemini)</li>
+            <li><strong>Screenshots</strong>: Images extracted from your video at key moments</li>
+        </ol>
+
+        <h3>Processing Details</h3>
+        <ul>
+            <li>All data transmission is encrypted via HTTPS</li>
+            <li>Processing is performed on Google's servers (third-party service)</li>
+            <li>Data handling is subject to <a href="https://ai.google.dev/gemini-api/terms#paid-services">Google's Gemini API terms for paid services</a></li>
+            <li>Temporary files are deleted from the app servers immediately after processing</li>
+            <li>We recommend reviewing <a href="https://policies.google.com/privacy">Google's privacy policy</a> for details on data retention and usage</li>
+        </ul>
+
+        <h3>Enterprise Deployments</h3>
+        <p>For enterprise deployments, this can be configured to use a company's firewalled enterprise Gemini instance, keeping all processing within your organization's infrastructure.</p>
+
+        <h2>Data Retention & Deletion</h2>
+
+        <h3>Temporary Files</h3>
+        <ul>
+            <li>All temporary processing files are automatically deleted immediately after use</li>
+            <li>Video files are deleted immediately after screenshot extraction</li>
+            <li>Audio files are deleted after transcription</li>
+            <li>No files are retained on our servers after processing completes</li>
+        </ul>
+
+        <h3>Generated Documentation</h3>
+        <ul>
+            <li>Generated documentation is only saved where you choose:
+                <ul>
+                    <li>Local download to your device</li>
+                    <li>Your Google Drive (if you choose to upload)</li>
+                </ul>
+            </li>
+            <li>We do not store copies of generated documentation on our servers</li>
+        </ul>
+
+        <h3>Your Control</h3>
+        <ul>
+            <li>You can delete uploaded videos at any time (before processing completes)</li>
+            <li>You can delete generated documents from Google Drive at any time</li>
+            <li>You can revoke Google Drive access at any time</li>
+        </ul>
+
+        <h2>Security Measures</h2>
+
+        <h3>Encryption</h3>
+        <ul>
+            <li>All data transmission uses HTTPS encryption</li>
+            <li>API communications are encrypted in transit</li>
+            <li>OAuth tokens are handled securely</li>
+        </ul>
+
+        <h3>Access Control</h3>
+        <ul>
+            <li>API keys are stored securely and never exposed to client-side code</li>
+            <li>User authentication for Google Drive uses OAuth 2.0</li>
+            <li>No passwords or credentials are stored by the application</li>
+        </ul>
+
+        <h3>Infrastructure</h3>
+        <ul>
+            <li><strong>Prototype Deployment</strong>: Hosted on Streamlit Community Cloud</li>
+            <li><strong>Enterprise Deployment</strong>: Can be deployed on internal company servers for enhanced security</li>
+            <li><strong>Data Processing</strong>: Uses Google's Gemini API (third-party service)</li>
+        </ul>
+
+        <h2>Third-Party Services</h2>
+        <p>This application uses the following third-party services:</p>
+
+        <h3>Google Gemini API</h3>
+        <ul>
+            <li><strong>Purpose</strong>: AI transcription, analysis, and documentation generation</li>
+            <li><strong>Data Shared</strong>: Audio recordings, transcripts, screenshots</li>
+            <li><strong>Privacy Policy</strong>: <a href="https://policies.google.com/privacy">Google Privacy Policy</a></li>
+            <li><strong>Terms of Service</strong>: <a href="https://ai.google.dev/gemini-api/terms#paid-services">Google Gemini API Terms</a></li>
+        </ul>
+
+        <h3>Google Drive API</h3>
+        <ul>
+            <li><strong>Purpose</strong>: File storage and management</li>
+            <li><strong>Data Shared</strong>: Generated Word documents</li>
+            <li><strong>Privacy Policy</strong>: <a href="https://policies.google.com/privacy">Google Privacy Policy</a></li>
+            <li><strong>Scope</strong>: Limited to files created by this app only</li>
+        </ul>
+
+        <h3>Streamlit Cloud (Hosting)</h3>
+        <ul>
+            <li><strong>Purpose</strong>: Application hosting</li>
+            <li><strong>Privacy Policy</strong>: <a href="https://streamlit.io/privacy-policy">Streamlit Privacy Policy</a></li>
+        </ul>
+
+        <h2>Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li><strong>Access</strong>: Know what data is being processed</li>
+            <li><strong>Control</strong>: Control where your generated documentation is saved</li>
+            <li><strong>Delete</strong>: Delete uploaded videos and generated documents at any time</li>
+            <li><strong>Revoke</strong>: Revoke Google Drive access at any time through your Google Account settings</li>
+        </ul>
+
+        <h2>Compliance</h2>
+
+        <h3>Data Protection</h3>
+        <p>We are committed to protecting your data and following best practices for data security and privacy.</p>
+
+        <h3>Enterprise Compliance</h3>
+        <p>For enterprise deployments:</p>
+        <ul>
+            <li>Can be configured to meet SOX, GDPR, and other regulatory requirements</li>
+            <li>Supports data residency requirements (deploy on internal servers)</li>
+            <li>Can use enterprise Gemini instances with enhanced data controls</li>
+        </ul>
+
+        <h2>Updates to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. The "Last Updated" date at the top of this policy indicates when changes were last made.</p>
+
+        <h2>Contact</h2>
+        <p>For questions, concerns, or requests regarding this Privacy Policy or your data, please <a href="https://mmautomates.com/#contact">contact us</a>.</p>
+
+        <h2>Disclaimer</h2>
+        <p>This application is provided as-is. While we implement security best practices, users should:</p>
+        <ul>
+            <li>Not upload sensitive or confidential information</li>
+            <li>Review third-party privacy policies (Google) before use</li>
+            <li>Use enterprise deployment options for highly sensitive data</li>
+            <li>Comply with their organization's data handling policies</li>
+        </ul>
+
+        <div class="warning" style="margin-top: 40px;">
+            <p><strong>By using this application, you acknowledge that you have read, understood, and agree to this Privacy Policy.</strong></p>
+        </div>
+    </div>
+</body>
+</html>
+
