@@ -278,4 +278,4 @@ Planned improvements include:
 
 ## Support
 
-For issues, questions, or contributions,  [contact the creator](info@mmautomates.com).
+For issues, questions, or contributions,  [contact the creator](https://mmautomates.com/#contact).
