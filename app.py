@@ -1541,7 +1541,7 @@ def main():
             - Audio recordings, transcripts, and screenshots are sent to Google's Gemini 2.5 Pro API for processing
             - All data transmission is encrypted via HTTPS
             - Processing is performed on Google's servers (third-party service)
-            - Data handling is subject to [Google's Gemini API Privacy Policy](https://ai.google.dev/gemini-api/docs/data-usage)
+            - Data handling is subject to [Google's Gemini API terms for paid services](https://ai.google.dev/gemini-api/terms#paid-services)
             - Temporary files are deleted from the app servers immediately after processing
             - We recommend reviewing Google's privacy policy for details on data retention and usage
             
