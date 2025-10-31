@@ -1451,31 +1451,6 @@ def main():
             - Optimized for single-process demonstrations
             """)
         
-        # Data Security
-        with st.expander("Data Security", expanded=False):
-            st.markdown("""
-            **Video Storage:**
-            - Videos for this prototype are stored as temporary files on Streamlit Cloud's servers
-            - Automatically deleted after screenshot frames are extracted
-            - Not retained on Streamlit Cloud's servers after processing completes
-            - Enterprise version would store temp files on company private servers
-            
-            **API Processing:**
-            - Audio and screenshots are sent to Google's Gemini-2.5 Pro API for analysis
-            - In enterprise deployments, can be configured to use company's firewalled enterprise Gemini instance
-            
-            **Google Drive Integration:**
-            - Generated documents are saved only to user's Google Drive
-            - User explicitly authorizes the app to access their Drive
-            - User retains full control and can delete files anytime
-            - App cannot access other Drive files
-            
-            **Deployment:**
-            - Prototype: Hosted on Streamlit Cloud
-            - Enterprise: Deployed on private company servers
-            - Recommended: Run on secured internal infrastructure for sensitive accounting data
-            """)
-        
         # Tools Used
         with st.expander("Tools & Technologies", expanded=False):
             st.markdown("""
@@ -1529,6 +1504,13 @@ def main():
             - Proprietary trade secrets or confidential business information
             - Any other highly sensitive data
             
+            **Video Storage:**
+            - Videos are stored as temporary files during processing
+            - Videos are automatically deleted immediately after screenshots are extracted
+            - Videos are not retained on servers after processing completes
+            - This prototype is hosted on Streamlit Community Cloud
+            - For enterprise use, this can be deployed on internal company servers for enhanced security
+            
             **Google Drive Integration:**
             - Generated documents are saved only to files created by this app in your Google Drive
             - The app uses the `drive.file` scope, which only allows access to files it creates
@@ -1544,6 +1526,7 @@ def main():
             - Data handling is subject to [Google's Gemini API terms for paid services](https://ai.google.dev/gemini-api/terms#paid-services)
             - Temporary files are deleted from the app servers immediately after processing
             - We recommend reviewing Google's privacy policy for details on data retention and usage
+            - For enterprise deployments, this can be configured to use a company's firewalled enterprise Gemini instance
             
             **Your Control:**
             - You can delete uploaded videos and generated documents at any time
