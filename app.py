@@ -740,8 +740,7 @@ def authenticate_google():
     try:
         from google_auth_oauthlib.flow import Flow
         
-        SCOPES = ['https://www.googleapis.com/auth/documents',
-                  'https://www.googleapis.com/auth/drive.file']
+        SCOPES = ['https://www.googleapis.com/auth/drive.file']
         
         # Load OAuth settings from Streamlit secrets
         # Expected structure in .streamlit/secrets.toml:
@@ -1516,6 +1515,40 @@ def main():
             - Easy to update when processes change
             - Walkthrough support for auditors
             
+            """)
+        
+        # Privacy Disclosure
+        with st.expander("Privacy & Data Security", expanded=False):
+            st.markdown("""
+            **⚠️ Important: Sensitive Data Notice**
+            
+            **DO NOT upload videos containing:**
+            - Passwords, credentials, or authentication codes
+            - Social Security Numbers or personal identification numbers
+            - Financial account numbers or routing information
+            - Proprietary trade secrets or confidential business information
+            - Any other highly sensitive data
+            
+            **Google Drive Integration:**
+            - Generated documents are saved only to files created by this app in your Google Drive
+            - The app uses the `drive.file` scope, which only allows access to files it creates
+            - The app cannot access, read, modify, or delete your existing Drive files
+            - You retain full control over uploaded documents and can delete them anytime
+            - You explicitly authorize Drive access via Google's OAuth consent screen
+            - Data transmission to Google Drive is encrypted via HTTPS
+            
+            **Gemini API Processing:**
+            - Audio recordings, transcripts, and screenshots are sent to Google's Gemini 2.5 Pro API for processing
+            - All data transmission is encrypted via HTTPS
+            - Processing is performed on Google's servers (third-party service)
+            - Data handling is subject to [Google's Gemini API Privacy Policy](https://ai.google.dev/gemini-api/docs/data-usage)
+            - Temporary files are deleted from the app servers immediately after processing
+            - We recommend reviewing Google's privacy policy for details on data retention and usage
+            
+            **Your Control:**
+            - You can delete uploaded videos and generated documents at any time
+            - All temporary processing files are automatically deleted after use
+            - Generated documentation is only saved where you choose (local download or your Google Drive)
             """)
         
         st.markdown("---")
