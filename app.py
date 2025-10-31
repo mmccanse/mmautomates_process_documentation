@@ -833,7 +833,6 @@ def authenticate_google():
         flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, redirect_uri=redirect_uri)
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true',
             prompt='consent'
         )
         st.session_state.oauth_state = state
