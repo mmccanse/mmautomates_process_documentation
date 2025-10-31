@@ -142,13 +142,14 @@ st.markdown("""
     /* Buttons */
     .stButton > button {
         background: var(--brand-primary);
-        color: #fff;
+        color: #fff !important;
         border: none;
         border-radius: 8px;
         padding: 0.6rem 1rem;
     }
     .stButton > button:hover {
-        background: var(--brand-primary-dark);
+        background: var(--brand-primary-dark) !important;
+        color: #fff !important;
     }
 
     /* Download buttons - match primary button style */
