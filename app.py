@@ -1015,7 +1015,7 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>✨ AI Process Documentation Generator ✨</h1>
+        <h1>AI Process Documentation Generator</h1>
         <p>Upload screen recordings → generate professional Standard Operating Procedures</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1359,7 +1359,7 @@ def main():
         st.markdown("---")
         
         # Tips for Best Results
-        with st.expander("💡 Tips for Best Results", expanded=False):
+        with st.expander("Tips for Best Results", expanded=False):
             st.markdown("""
             **Video Recording:**
             - Use a clear screen recording tool
@@ -1378,7 +1378,7 @@ def main():
             """)
         
         # Roadmap
-        with st.expander("🗺️ Roadmap & Future Features", expanded=False):
+        with st.expander("Roadmap & Future Features", expanded=False):
             st.markdown("""
             **Phase 2 - Smart Annotations:**
             - Auto-detect and highlight UI elements referenced in audio
@@ -1398,7 +1398,7 @@ def main():
             """)
         
         # Known Limitations
-        with st.expander("⚠️ Known Limitations", expanded=False):
+        with st.expander("Known Limitations", expanded=False):
             st.markdown("""
             **Screenshot Timing:**
             - Screenshots may lag 1-2 seconds behind audio description
@@ -1419,7 +1419,7 @@ def main():
             """)
         
         # Data Security
-        with st.expander("🔒 Data Security", expanded=False):
+        with st.expander("Data Security", expanded=False):
             st.markdown("""
             **Video Storage:**
             - Videos for this prototype are stored as temporary files on Streamlit Cloud's servers
@@ -1444,7 +1444,7 @@ def main():
             """)
         
         # Tools Used
-        with st.expander("🛠️ Tools & Technologies", expanded=False):
+        with st.expander("Tools & Technologies", expanded=False):
             st.markdown("""
             **Core Framework:**
             - Streamlit 1.28+
@@ -1476,7 +1476,7 @@ def main():
             """)
         
         # Accounting Use Cases
-        with st.expander("📊 Accounting Use Cases", expanded=False):
+        with st.expander("Accounting Use Cases", expanded=False):
             st.markdown("""
             - Training new team members
             - Sharing process information among team and stakeholders
@@ -1487,7 +1487,7 @@ def main():
         
         st.markdown("---")
         st.markdown("""
-        ### 📝 About
+        ### About
         
         ***AI Process Documentation Generator***
         
