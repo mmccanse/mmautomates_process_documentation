@@ -211,13 +211,13 @@ Upon termination:
 
 ### Governing Law
 
-These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law provisions.
+These Terms shall be governed by and construed in accordance with the laws of the state of Colorado United States, without regard to its conflict of law provisions.
 
 ### Dispute Resolution Process
 
 1. **Informal Resolution**: We encourage you to contact us first to resolve any disputes informally
 2. **Mediation**: If informal resolution fails, disputes may be resolved through mediation
-3. **Jurisdiction**: Any legal action shall be brought in the courts of [Your Jurisdiction]
+3. **Jurisdiction**: Any legal action shall be brought in the courts of the state of Colorado, United States
 
 ---
 
