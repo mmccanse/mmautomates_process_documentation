@@ -44,6 +44,51 @@ st.set_page_config(
     layout="wide"
 )
 
+# Add Open Graph meta tags for social sharing previews
+# Replace YOUR_APP_URL with your actual Streamlit app URL
+# Replace YOUR_THUMBNAIL_URL with a publicly accessible image URL (1200x630px recommended)
+APP_URL = "https://sop-ai.streamlit.app"  # Update this with your actual Streamlit app URL
+THUMBNAIL_URL = "https://sop-ai.streamlit.app/swirl2.png"  # Update with your thumbnail image URL
+APP_DESCRIPTION = "AI Process Documentation Generator - Upload screen recordings → generate professional Standard Operating Procedures"
+
+st.markdown(f"""
+<script>
+(function() {{
+    // Function to add or update meta tag
+    function addMetaTag(property, content) {{
+        let meta = document.querySelector(`meta[property="${{property}}"]`) || 
+                   document.querySelector(`meta[name="${{property}}"]`);
+        if (!meta) {{
+            meta = document.createElement('meta');
+            if (property.startsWith('og:')) {{
+                meta.setAttribute('property', property);
+            }} else {{
+                meta.setAttribute('name', property);
+            }}
+            document.head.appendChild(meta);
+        }}
+        meta.setAttribute('content', content);
+    }}
+    
+    // Open Graph tags
+    addMetaTag('og:title', 'SOP ai - AI Process Documentation Generator');
+    addMetaTag('og:description', '{APP_DESCRIPTION}');
+    addMetaTag('og:image', '{THUMBNAIL_URL}');
+    addMetaTag('og:url', '{APP_URL}');
+    addMetaTag('og:type', 'website');
+    
+    // Twitter Card tags
+    addMetaTag('twitter:card', 'summary_large_image');
+    addMetaTag('twitter:title', 'SOP ai - AI Process Documentation Generator');
+    addMetaTag('twitter:description', '{APP_DESCRIPTION}');
+    addMetaTag('twitter:image', '{THUMBNAIL_URL}');
+    
+    // Additional meta tags
+    addMetaTag('description', '{APP_DESCRIPTION}');
+}})();
+</script>
+""", unsafe_allow_html=True)
+
 # Custom CSS - Cache-busted with version timestamp
 CSS_VERSION = "v2024.01"  # Update this when CSS changes to force browser reload
 st.markdown("""
