@@ -47,8 +47,8 @@ st.set_page_config(
 # Add Open Graph meta tags for social sharing previews
 # Replace YOUR_APP_URL with your actual Streamlit app URL
 # Replace YOUR_THUMBNAIL_URL with a publicly accessible image URL (1200x630px recommended)
-APP_URL = "https://sop-ai.streamlit.app"  # Update this with your actual Streamlit app URL
-THUMBNAIL_URL = "https://sop-ai.streamlit.app/swirl2.png"  # Update with your thumbnail image URL
+APP_URL = "https://sop.mmautomates.com"  # Updated to custom domain
+THUMBNAIL_URL = "https://sop.mmautomates.com/swirl2.png"  # Updated to custom domain
 APP_DESCRIPTION = "AI Process Documentation Generator - Upload screen recordings → generate professional Standard Operating Procedures"
 
 st.markdown(f"""
@@ -787,19 +787,29 @@ def authenticate_google():
         
         SCOPES = ['https://www.googleapis.com/auth/drive.file']
         
-        # Load OAuth settings from Streamlit secrets
-        # Expected structure in .streamlit/secrets.toml:
-        # [google_oauth]
-        # client_id = "..."
-        # client_secret = "..."
-        # redirect_uri = "https://<your-streamlit-app-url>"
-        try:
-            oauth_cfg = st.secrets["google_oauth"]
-            client_id = oauth_cfg["client_id"]
-            client_secret = oauth_cfg["client_secret"]
-            redirect_uri = oauth_cfg["redirect_uri"]
-        except Exception:
-            st.error("⚠️ Google OAuth is not configured. Add google_oauth.client_id, client_secret, and redirect_uri to Streamlit Secrets.")
+        # Load OAuth settings from environment variables (for Cloud Run) or Streamlit secrets (for Streamlit Cloud)
+        # Priority: Environment variables first (for self-hosted), then Streamlit secrets (for Streamlit Cloud)
+        client_id = None
+        client_secret = None
+        redirect_uri = None
+        
+        # Try environment variables first (for Cloud Run / self-hosted)
+        if os.getenv('GOOGLE_OAUTH_CLIENT_ID') and os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'):
+            client_id = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+            client_secret = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
+            redirect_uri = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://sop.mmautomates.com')
+        else:
+            # Fall back to Streamlit secrets (for Streamlit Cloud)
+            try:
+                oauth_cfg = st.secrets["google_oauth"]
+                client_id = oauth_cfg["client_id"]
+                client_secret = oauth_cfg["client_secret"]
+                redirect_uri = oauth_cfg["redirect_uri"]
+            except Exception:
+                pass
+        
+        if not client_id or not client_secret:
+            st.error("⚠️ Google OAuth is not configured. Set environment variables (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET) or add google_oauth settings to Streamlit Secrets.")
             return None
         
         client_config = {
@@ -1572,8 +1582,8 @@ def main():
         with st.expander("Privacy & Data Security", expanded=False):
             st.markdown("""
             **📄 Legal Documents:**
-            - [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md)
-            - [Terms of Use](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/TERMS_OF_USE.md)
+            - [Privacy Policy](https://mmautomates.com/privacy-policy)
+            - [Terms of Use](https://mmautomates.com/terms-of-use)
             
             ---
             
@@ -1624,7 +1634,7 @@ def main():
         
         Converts screen recordings into professional Standard Operating Procedures (SOPs) using AI transcription and visual analysis.
         
-        [Privacy Policy](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/PRIVACY_POLICY.md) | [Terms of Use](https://github.com/mmccanse/mmautomates_process_documentation/blob/main/TERMS_OF_USE.md)
+        [Privacy Policy](https://mmautomates.com/privacy-policy) | [Terms of Use](https://mmautomates.com/terms-of-use)
         """)
 
 
