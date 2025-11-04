@@ -7,6 +7,7 @@ steps:
       '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:latest',
       '.'
     ]
+    id: 'build-image'
 
   # Push the Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -14,12 +15,8 @@ steps:
       'push',
       'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:$COMMIT_SHA'
     ]
-  
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push',
-      'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:latest'
-    ]
+    id: 'push-image'
+    waitFor: ['build-image']
 
   # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -35,7 +32,9 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--quiet'
+    id: 'deploy-service'
+    waitFor: ['push-image']
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:$COMMIT_SHA'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:latest'
