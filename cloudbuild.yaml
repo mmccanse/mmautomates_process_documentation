@@ -32,7 +32,6 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--quiet'
     id: 'deploy-service'
     waitFor: ['push-image']
 
