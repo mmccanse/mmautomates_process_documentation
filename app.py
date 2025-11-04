@@ -1130,6 +1130,33 @@ def show_moment_editor(key_moments):
 def main():
     initialize_session_state()
     
+    # Logo with link to homepage - positioned at top left using columns
+    # Check for local logo first, otherwise use URL
+    logo_path = os.path.join(os.path.dirname(__file__), "logo_large.png")
+    
+    col_logo, col_spacer = st.columns([1, 11])
+    with col_logo:
+        if os.path.exists(logo_path):
+            # Use local file - convert to base64 for embedding
+            with open(logo_path, "rb") as img_file:
+                img_data = base64.b64encode(img_file.read()).decode()
+                st.markdown(f"""
+                <div style="padding: 10px 0;">
+                    <a href="https://mmautomates.com" target="_self" style="text-decoration: none; display: inline-block;">
+                        <img src="data:image/png;base64,{img_data}" alt="MM Automates" style="height: 96px; width: 96px; object-fit: contain; cursor: pointer;">
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            # Fallback to URL
+            st.markdown("""
+            <div style="padding: 10px 0;">
+                <a href="https://mmautomates.com" target="_self" style="text-decoration: none; display: inline-block;">
+                    <img src="https://mmautomates.com/logo_large.png" alt="MM Automates" style="height: 96px; width: 96px; object-fit: contain; cursor: pointer;">
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+    
     # Header
     st.markdown("""
     <div class="main-header">
