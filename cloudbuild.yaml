@@ -36,5 +36,8 @@ steps:
     id: 'deploy-service'
     waitFor: ['push-image']
 
+options:
+  logging: NONE
+
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/sop-ai-repo/sop-ai:$COMMIT_SHA'
