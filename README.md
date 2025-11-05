@@ -3,7 +3,7 @@
 ## Overview
 
 **Purpose:**  
-The AI Process Documentation Generator converts screen recordings into professional Standard Operating Procedure (SOP) documentation. Users upload a video recording in which they narrate a business process, and the app automatically generates audit-ready documentation with embedded screenshots.-
+The AI Process Documentation Generator converts screen recordings into professional Standard Operating Procedure (SOP) documentation. Users upload a video recording in which they narrate a business process, and the app automatically generates audit-ready documentation with embedded screenshots.
 
 It helps accounting and finance teams quickly document complex procedures such as:
 - Preparing journal entries  

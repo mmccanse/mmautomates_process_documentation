@@ -683,16 +683,31 @@ def create_word_document(content, frames):
                 title_text = line[7:].strip()
                 p = doc.add_heading(title_text, level=0)
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                # Explicitly set title font properties
+                for run in p.runs:
+                    run.font.size = Pt(24)
+                    run.font.bold = True
+                    run.font.name = 'Calibri'
             
             # Handle SECTION
             elif line.startswith('[SECTION]'):
                 section_text = line[9:].strip()
-                doc.add_heading(section_text, level=1)
+                heading = doc.add_heading(section_text, level=1)
+                # Explicitly set heading font properties
+                for run in heading.runs:
+                    run.font.size = Pt(16)
+                    run.font.bold = True
+                    run.font.name = 'Calibri'
             
             # Handle SUBSECTION
             elif line.startswith('[SUBSECTION]'):
                 subsection_text = line[12:].strip()
-                doc.add_heading(subsection_text, level=2)
+                heading = doc.add_heading(subsection_text, level=2)
+                # Explicitly set subheading font properties
+                for run in heading.runs:
+                    run.font.size = Pt(14)
+                    run.font.bold = True
+                    run.font.name = 'Calibri'
             
             # Handle STEP
             elif line.startswith('[STEP]'):
@@ -907,7 +922,7 @@ def authenticate_google():
         return None
 
 def show_image_viewer(frames):
-    """Display the full-screen image viewer with navigation"""
+    """Display the full-screen image viewer with navigation and editing"""
     if not frames or st.session_state.viewing_image is None:
         return
     
@@ -921,6 +936,15 @@ def show_image_viewer(frames):
     
     current_frame = frames[current_index]
     
+    # Initialize editing state for this frame if not exists
+    edit_key_prefix = f"edit_frame_{current_index}"
+    if f"{edit_key_prefix}_description" not in st.session_state:
+        st.session_state[f"{edit_key_prefix}_description"] = current_frame['moment']['description']
+    if f"{edit_key_prefix}_type" not in st.session_state:
+        st.session_state[f"{edit_key_prefix}_type"] = current_frame['moment']['type']
+    if f"{edit_key_prefix}_nav_path" not in st.session_state:
+        st.session_state[f"{edit_key_prefix}_nav_path"] = current_frame['moment'].get('navigation_path', '')
+    
     # Create the viewer container
     st.markdown("""
     <div class="image-viewer-container">
@@ -928,11 +952,11 @@ def show_image_viewer(frames):
     
     st.markdown("### 🖼️ Image Viewer")
     
-    # Navigation controls
+    # Navigation controls - use key parameter to prevent reload on navigation
     col1, col2, col3, col4, col5 = st.columns([1, 1, 3, 1, 1])
     
     with col1:
-        if st.button("← Previous", disabled=(current_index == 0)):
+        if st.button("← Previous", disabled=(current_index == 0), key=f"nav_prev_{current_index}"):
             st.session_state.viewing_image = current_index - 1
             st.rerun()
     
@@ -940,35 +964,87 @@ def show_image_viewer(frames):
         st.markdown(f"<div style='text-align: center; padding: 8px;'><strong>{current_index + 1} / {total_images}</strong></div>", unsafe_allow_html=True)
     
     with col4:
-        if st.button("Next →", disabled=(current_index == total_images - 1)):
+        if st.button("Next →", disabled=(current_index == total_images - 1), key=f"nav_next_{current_index}"):
             st.session_state.viewing_image = current_index + 1
             st.rerun()
     
     with col5:
-        if st.button("✕ Close Viewer", type="secondary"):
+        if st.button("✕ Close Viewer", type="secondary", key=f"nav_close_{current_index}"):
             st.session_state.viewing_image = None
             st.rerun()
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Display full-size image - centered and slightly larger (550px)
+    # Display full-size image - use use_column_width to prevent reload
     col_left, col_img, col_right = st.columns([1, 2, 1])
     with col_img:
-        st.image(current_frame['image'], width=550)
+        # Cache image display to prevent reload
+        st.image(current_frame['image'], width=550, use_container_width=False)
     
-    # Image details
+    # Editable Image details
     st.markdown("---")
+    st.markdown("### ✏️ Edit Image Details")
     
     col1, col2 = st.columns(2)
     
     with col1:
+        # Editable timestamp (read-only for now, but display it)
         st.markdown(f"**⏱️ Timestamp:** {current_frame['timestamp']}")
-        st.markdown(f"**📍 Type:** {current_frame['moment']['type']}")
+        
+        # Editable Type
+        type_options = ['navigation', 'action', 'data_entry', 'decision', 'submission']
+        new_type = st.selectbox(
+            "📍 Type:",
+            options=type_options,
+            index=type_options.index(st.session_state[f"{edit_key_prefix}_type"]) if st.session_state[f"{edit_key_prefix}_type"] in type_options else 0,
+            key=f"{edit_key_prefix}_type_input"
+        )
+        
+        # Update session state
+        if new_type != st.session_state[f"{edit_key_prefix}_type"]:
+            st.session_state[f"{edit_key_prefix}_type"] = new_type
+            # Update the frame data in both frames parameter and session state
+            frames[current_index]['moment']['type'] = new_type
+            if st.session_state.extracted_frames:
+                st.session_state.extracted_frames[current_index]['moment']['type'] = new_type
     
     with col2:
-        st.markdown(f"**📝 Description:**\n{current_frame['moment']['description']}")
-        if current_frame['moment'].get('navigation_path'):
+        # Editable Description
+        new_description = st.text_area(
+            "📝 Description:",
+            value=st.session_state[f"{edit_key_prefix}_description"],
+            height=100,
+            key=f"{edit_key_prefix}_description_input"
+        )
+        
+        # Update session state and frame data
+        if new_description != st.session_state[f"{edit_key_prefix}_description"]:
+            st.session_state[f"{edit_key_prefix}_description"] = new_description
+            frames[current_index]['moment']['description'] = new_description
+            if st.session_state.extracted_frames:
+                st.session_state.extracted_frames[current_index]['moment']['description'] = new_description
+        
+        # Navigation path (if type is navigation)
+        if new_type == 'navigation':
+            new_nav_path = st.text_input(
+                "🧭 Navigation Path:",
+                value=st.session_state[f"{edit_key_prefix}_nav_path"],
+                key=f"{edit_key_prefix}_nav_input",
+                placeholder="Menu > Options > Add Account"
+            )
+            if new_nav_path != st.session_state[f"{edit_key_prefix}_nav_path"]:
+                st.session_state[f"{edit_key_prefix}_nav_path"] = new_nav_path
+                frames[current_index]['moment']['navigation_path'] = new_nav_path
+                if st.session_state.extracted_frames:
+                    st.session_state.extracted_frames[current_index]['moment']['navigation_path'] = new_nav_path
+        elif current_frame['moment'].get('navigation_path'):
             st.markdown(f"**🧭 Navigation:** `{current_frame['moment']['navigation_path']}`")
+    
+    # Save changes button
+    if st.button("💾 Save Changes", key=f"save_{current_index}", type="primary"):
+        # Changes are already saved to frames, just show confirmation
+        st.success("✅ Changes saved! They will be included in the generated documentation.")
+        st.rerun()
 
 def show_moment_editor(key_moments):
     """Show interactive editor for key moments"""
