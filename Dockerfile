@@ -23,6 +23,6 @@ EXPOSE 8080
 # Health check
 HEALTHCHECK CMD curl --fail http://localhost:8080/_stcore/health || exit 1
 
-# Run Streamlit with explicit upload size configuration
-CMD streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --server.maxUploadSize=200 --server.maxMessageSize=200
+# Run Streamlit with explicit upload size configuration (30MB limit for Cloud Run)
+CMD streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --server.maxUploadSize=30 --server.maxMessageSize=30
 
