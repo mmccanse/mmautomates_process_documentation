@@ -32,6 +32,14 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--timeout'
+      - '3600'
+      - '--max-instances'
+      - '10'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
     id: 'deploy-service'
     waitFor: ['push-image']
 

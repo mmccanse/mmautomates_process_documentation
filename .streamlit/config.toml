@@ -3,3 +3,7 @@ base="light"
 primaryColor="#0369a1"
 backgroundColor="#d1effe"
 secondaryBackgroundColor="#ffffff"
+
+[server]
+maxUploadSize = 200
+maxMessageSize = 200

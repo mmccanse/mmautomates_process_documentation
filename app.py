@@ -1307,11 +1307,23 @@ def main():
     # Main interface
     st.markdown("### Step 1: Upload Your Screen Recording")
     
+    # File size warning
+    st.info("💡 **File Size Limit:** Videos up to 200MB are supported. For best performance, keep videos under 100MB.")
+    
     uploaded_file = st.file_uploader(
         "Choose a video file",
         type=['mp4', 'mov', 'avi', 'webm', 'mkv'],
         help="Upload a screen recording where you talk through a process"
     )
+    
+    # Check file size and warn if too large
+    if uploaded_file is not None:
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+        if file_size_mb > 200:
+            st.error(f"❌ File too large ({file_size_mb:.1f}MB). Maximum size is 200MB. Please compress your video or use a smaller file.")
+            st.stop()
+        elif file_size_mb > 100:
+            st.warning(f"⚠️ Large file detected ({file_size_mb:.1f}MB). Upload may take longer. Consider compressing for faster processing.")
     
     if uploaded_file is not None:
         # Clear previous session artifacts ONLY when the uploaded file changes
@@ -1475,7 +1487,7 @@ def main():
         st.markdown("---")
         
         if not st.session_state.word_doc_bytes:
-            if st.button("🤖 Generate Professional Documentation", type="primary"):
+            if st.button("Generate Professional Documentation", type="primary"):
                 # Generate documentation using delimiters
                 doc_content = generate_documentation(
                     st.session_state.transcript,
@@ -1535,9 +1547,6 @@ def main():
             
             Authenticate once, then you can upload the Word document directly to your Drive.
             
-            **One-time setup required:**
-            - You need `credentials.json` from Google Cloud Console
-            - See instructions in sidebar or README
             """)
             
             col_auth1, col_auth2 = st.columns([1, 2])
