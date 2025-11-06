@@ -1308,22 +1308,46 @@ def main():
     st.markdown("### Step 1: Upload Your Screen Recording")
     
     # File size warning
-    st.info("💡 **File Size Limit:** Videos up to 200MB are supported. For best performance, keep videos under 100MB.")
+    with st.expander("ℹ️ File Size Limits & Compression Tips", expanded=False):
+        st.markdown("""
+        **Maximum File Size: 30MB**
+        
+        Due to platform limitations, videos must be under 30MB. If your video is larger:
+        
+        **Quick Compression Options:**
+        - **Windows:** Use HandBrake (free) or VLC Media Player
+        - **Mac:** Use QuickTime Player (File → Export As → Compressed)
+        - **Online:** Use CloudConvert or similar tools
+        
+        **Recommended Settings for Compression:**
+        - Format: MP4 (H.264)
+        - Resolution: 1280x720 or 1920x1080 (match original or lower)
+        - Bitrate: 2-5 Mbps (lower for smaller files)
+        - Frame rate: 30 fps (or match original)
+        
+        **Note:** Compressed videos will process correctly as long as they're in a supported format (MP4, MOV, AVI, WebM, MKV).
+        """)
     
     uploaded_file = st.file_uploader(
-        "Choose a video file",
+        "Choose a video file (max 30MB)",
         type=['mp4', 'mov', 'avi', 'webm', 'mkv'],
-        help="Upload a screen recording where you talk through a process"
+        help="Upload a screen recording where you talk through a process. Maximum file size is 30MB."
     )
     
     # Check file size and warn if too large
     if uploaded_file is not None:
         file_size_mb = uploaded_file.size / (1024 * 1024)
-        if file_size_mb > 200:
-            st.error(f"❌ File too large ({file_size_mb:.1f}MB). Maximum size is 200MB. Please compress your video or use a smaller file.")
+        if file_size_mb > 30:
+            st.error(f"❌ File too large ({file_size_mb:.1f}MB). Maximum size is 30MB.")
+            st.markdown("""
+            **Please compress your video:**
+            1. Use HandBrake, VLC, or QuickTime to compress
+            2. Aim for 30MB or under
+            3. Try again after compression
+            """)
             st.stop()
-        elif file_size_mb > 100:
-            st.warning(f"⚠️ Large file detected ({file_size_mb:.1f}MB). Upload may take longer. Consider compressing for faster processing.")
+        elif file_size_mb > 25:
+            st.warning(f"⚠️ File is close to limit ({file_size_mb:.1f}MB / 30MB). Consider compressing if upload fails.")
     
     if uploaded_file is not None:
         # Clear previous session artifacts ONLY when the uploaded file changes

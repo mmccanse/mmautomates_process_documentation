@@ -5,5 +5,5 @@ backgroundColor="#d1effe"
 secondaryBackgroundColor="#ffffff"
 
 [server]
-maxUploadSize = 200
-maxMessageSize = 200
+maxUploadSize = 30
+maxMessageSize = 30
