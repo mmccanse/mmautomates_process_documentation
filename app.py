@@ -70,6 +70,39 @@ st.markdown(f"""
         meta.setAttribute('content', content);
     }}
     
+    // Add favicon link if it doesn't exist
+    function addFavicon() {{
+        let link = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+        if (!link) {{
+            // Try multiple paths for favicon
+            const faviconPaths = [
+                '/static/favicon.png',  // Streamlit static directory
+                '{APP_URL}/static/favicon.png',  // Full URL to static
+                '{APP_URL}/swirl2.png',  // Direct file path
+                '/swirl2.png'  // Relative path
+            ];
+            
+            // Try each path
+            for (const path of faviconPaths) {{
+                link = document.createElement('link');
+                link.rel = 'icon';
+                link.type = 'image/png';
+                link.href = path;
+                document.head.appendChild(link);
+                break; // Use first path
+            }}
+            
+            // Also add as apple-touch-icon for better compatibility
+            let appleLink = document.createElement('link');
+            appleLink.rel = 'apple-touch-icon';
+            appleLink.href = '/static/favicon.png';
+            document.head.appendChild(appleLink);
+        }}
+    }}
+    
+    // Add favicon
+    addFavicon();
+    
     // Open Graph tags
     addMetaTag('og:title', 'SOP ai - AI Process Documentation Generator');
     addMetaTag('og:description', '{APP_DESCRIPTION}');
@@ -975,11 +1008,10 @@ def show_image_viewer(frames):
     
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Display full-size image - use use_column_width to prevent reload
+    # Display full-size image - centered and slightly larger (550px)
     col_left, col_img, col_right = st.columns([1, 2, 1])
     with col_img:
-        # Cache image display to prevent reload
-        st.image(current_frame['image'], width=550, use_container_width=False)
+        st.image(current_frame['image'], width=550)
     
     # Editable Image details
     st.markdown("---")
